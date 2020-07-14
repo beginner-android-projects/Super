@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/auth_graph"
+    app:startDestination="@id/login">
+
+    <fragment
+        android:id="@+id/login"
+        android:name="com.nguyen.asuper.ui.auth.LoginFragment"
+        tools:layout="@layout/fragment_login"
+        android:label="login">
+        <action
+            android:id="@+id/action_login_to_register"
+            app:destination="@id/register"
+            app:popExitAnim="@anim/slide_down" />
+        <action
+            android:id="@+id/action_login_to_reset_password"
+            app:destination="@id/reset_password" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/register"
+        android:name="com.nguyen.asuper.ui.auth.RegisterFragment"
+        tools:layout="@layout/fragment_register"
+        android:label="register">
+
+    </fragment>
+
+    <fragment
+        android:id="@+id/reset_password"
+        android:name="com.nguyen.asuper.ui.auth.ResetPasswordFragment"
+        tools:layout="@layout/fragment_reset_password"
+        android:label="reset">
+
+    </fragment>
+
+
+</navigation>

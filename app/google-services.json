@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "7368187473",
+    "firebase_url": "https://super-5fa07.firebaseio.com",
+    "project_id": "super-5fa07",
+    "storage_bucket": "super-5fa07.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:7368187473:android:8b4aa458ea6e8a08d5e270",
+        "android_client_info": {
+          "package_name": "com.nguyen.asuper"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "7368187473-9dgfgi0f2bbdls864dj1m5j8fok1ntr6.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCqOsmNCANEraAHR18n82jlyZ2AeX3iufQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "7368187473-9dgfgi0f2bbdls864dj1m5j8fok1ntr6.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

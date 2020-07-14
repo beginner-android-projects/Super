@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <data>
+
+        <variable
+            name="fare"
+            type="String" />
+
+    </data>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <androidx.cardview.widget.CardView
+            android:id="@+id/cardView4"
+            android:layout_width="match_parent"
+            android:layout_height="100dp"
+            app:cardCornerRadius="15dp"
+            android:visibility="visible"
+            android:layout_marginTop="10dp"
+            android:layout_marginHorizontal="20dp"
+            app:layout_constraintTop_toTopOf="parent" />
+
+
+        <View
+            android:id="@+id/view7"
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:elevation="2dp"
+            android:background="@color/grey"
+            app:layout_constraintBottom_toBottomOf="@+id/cardView4"
+            app:layout_constraintEnd_toEndOf="@id/cardView4"
+            app:layout_constraintStart_toStartOf="@id/cardView4"
+            app:layout_constraintTop_toTopOf="@+id/cardView4" />
+
+
+        <ImageView
+            android:id="@+id/imageView4"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:layout_margin="10dp"
+            android:elevation="2dp"
+            android:src="@drawable/apple_pay_icon"
+            app:layout_constraintBottom_toTopOf="@+id/view7"
+            app:layout_constraintStart_toStartOf="@+id/cardView4"
+            app:layout_constraintTop_toTopOf="@+id/cardView4" />
+
+        <TextView
+            android:id="@+id/textView9"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="5dp"
+            android:layout_marginBottom="1dp"
+            android:elevation="2dp"
+            android:fontFamily="@font/montserrat"
+            android:text="Apple Pay"
+            android:textColor="@color/textColor"
+            android:textSize="18sp"
+            app:layout_constraintBottom_toTopOf="@+id/view7"
+            app:layout_constraintStart_toEndOf="@+id/imageView4"
+            app:layout_constraintTop_toTopOf="@+id/cardView4" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:elevation="2dp"
+            android:text="@{fare}"
+            android:fontFamily="@font/montserrat"
+            android:textColor="@color/textColor"
+            android:textSize="16sp"
+            android:layout_marginEnd="10dp"
+            app:layout_constraintBottom_toTopOf="@+id/view7"
+            app:layout_constraintEnd_toEndOf="@+id/cardView4"
+            app:layout_constraintTop_toTopOf="@+id/cardView4" />
+
+        <ImageView
+            android:id="@+id/imageView5"
+            android:layout_width="50dp"
+            android:layout_height="30dp"
+            android:layout_marginStart="10dp"
+            android:elevation="2dp"
+            android:src="@drawable/coupon_icon"
+            app:layout_constraintBottom_toBottomOf="@id/cardView4"
+            app:layout_constraintStart_toStartOf="@+id/cardView4"
+            app:layout_constraintTop_toBottomOf="@+id/view7" />
+
+        <EditText
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:hint="Enter coupon"
+            android:elevation="2dp"
+            android:layout_marginHorizontal="5dp"
+            android:background="@null"
+            app:layout_constraintBottom_toBottomOf="@id/cardView4"
+            app:layout_constraintEnd_toEndOf="@+id/cardView4"
+            app:layout_constraintStart_toEndOf="@+id/imageView5"
+            app:layout_constraintTop_toBottomOf="@+id/view7" />
+
+        <androidx.cardview.widget.CardView
+            android:id="@+id/request_button"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:layout_marginHorizontal="20dp"
+            android:layout_marginTop="10dp"
+            android:layout_marginBottom="10dp"
+            app:cardBackgroundColor="@color/lightBlue"
+            app:cardCornerRadius="40dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/cardView4" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="@font/montserrat_bold"
+            android:elevation="2dp"
+            android:textSize="18dp"
+            android:text="Request"
+            android:textColor="@color/textColor"
+            app:layout_constraintBottom_toBottomOf="@+id/request_button"
+            app:layout_constraintEnd_toEndOf="@+id/request_button"
+            app:layout_constraintStart_toStartOf="@+id/request_button"
+            app:layout_constraintTop_toTopOf="@+id/request_button" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</layout>

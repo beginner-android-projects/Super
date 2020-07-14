@@ -1,0 +1,36 @@
+<resources>
+    <string name="app_name">Super</string>
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="enter_your_email">Enter your email</string>
+    <string name="enter_password">Enter password</string>
+    <string name="enter_username">Enter username</string>
+    <string name="super_text">Super</string>
+    <string name="forgot_password">Forgot password?</string>
+    <string name="don_t_have_an_account_create_one_for_free">Don\'t have an account? Create one for free!</string>
+    <string name="please_enter_your_email_below_so_we_can_reset_your_password">Please enter your email below so we can reset your password.</string>
+    <string name="save">Save</string>
+    <string name="skip">Skip</string>
+    <string name="provide_us_your_work_address">Provide us your work address</string>
+    <string name="work_address">Work Address</string>
+    <string name="home_address">Home Address</string>
+    <string name="provide_us_your_home_address">Provide us your home address</string>
+    <string name="enter_home_address">Enter home address</string>
+    <string name="API_KEY">AIzaSyBcnoHY2ZzBo34VSJGtF7g4wW3pLrr7SGQ</string>
+    <string name="provide_us_your_home_and_work_address">Provide us your home and work address</string>
+    <string name="enter_work_address">Enter work address</string>
+    <string name="tap_to_choose_a_profile_photo">Tap to choose a profile photo</string>
+    <string name="your_address">Your address</string>
+    <string name="taxi">TAXI</string>
+    <string name="suv">SUV</string>
+    <string name="black">BLACK</string>
+    <string name="superx">SuperX</string>
+    <string name="super_capital">SUPER</string>
+    <string name="eta">ETA</string>
+    <string name="max_size">MAX SIZE</string>
+    <string name="enter_destination">Enter destination</string>
+    <string name="current_location">Current Location</string>
+    <string name="enter_pickup_location">Enter Pickup Location</string>
+    <string name="work">Work</string>
+    <string name="home">Home</string>
+</resources>
