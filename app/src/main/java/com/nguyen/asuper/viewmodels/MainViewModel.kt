@@ -1,5 +1,6 @@
 package com.nguyen.asuper.viewmodels
 
+import android.graphics.Bitmap
 import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -12,28 +13,28 @@ import com.google.android.libraries.places.api.model.Place
 import com.google.android.libraries.places.api.net.PlacesClient
 import com.nguyen.asuper.R
 import com.nguyen.asuper.data.ApiResponse
-import com.nguyen.asuper.data.Driver
+import com.nguyen.asuper.data.Coupon
 import com.nguyen.asuper.data.OriginDestination
-import com.nguyen.asuper.databinding.FragmentMapBinding
+import com.nguyen.asuper.data.Trip
 import com.nguyen.asuper.repository.MainRepository
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers.Main
-import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
 
 class MainViewModel(private val repository: MainRepository) : ViewModel(){
 
     private val autoSuggestionsResponse: MutableLiveData<ApiResponse<List<AutocompletePrediction>>> = MutableLiveData()
     private val directionResponse: MutableLiveData<ApiResponse<Direction>> = MutableLiveData()
-    private val findDriverResponse: MutableLiveData<ApiResponse<Driver>> = MutableLiveData()
+    private val requestRideResponse: MutableLiveData<ApiResponse<Trip>> = MutableLiveData()
     private val driverDirectionResponse: MutableLiveData<ApiResponse<Direction>> = MutableLiveData()
+    private val couponListResponse: MutableLiveData<ApiResponse<List<Coupon>>> = MutableLiveData()
+    private val submitRatingResponse: MutableLiveData<ApiResponse<Unit>> = MutableLiveData()
+
 
     val originDestination: MutableLiveData<OriginDestination> = MutableLiveData(OriginDestination())
     val autoSuggestionsList: LiveData<List<AutocompletePrediction>> = Transformations.map(autoSuggestionsResponse){
         it.data
     }
-    val direction: LiveData<List<LatLng>> = Transformations.map(directionResponse){
-        it.data?.routeList?.get(0)?.overviewPolyline?.pointList
+    val direction: LiveData<Direction> = Transformations.map(directionResponse){
+        it.data
     }
     val directionStatus: LiveData<Boolean> = Transformations.map(directionResponse){
         it.status
@@ -42,6 +43,8 @@ class MainViewModel(private val repository: MainRepository) : ViewModel(){
     val directionMsg: LiveData<String> = Transformations.map(directionResponse){
         it.message
     }
+
+    val errorMsg: MutableLiveData<String> = MutableLiveData()
 
     val directionDuration: LiveData<String> = Transformations.map(directionResponse){
         timeConverter(it.data?.routeList?.get(0)?.totalDuration)
@@ -52,13 +55,16 @@ class MainViewModel(private val repository: MainRepository) : ViewModel(){
     val fareEstimated: MutableLiveData<Double> = MutableLiveData()
 
     val carSize: MutableLiveData<Int> = MutableLiveData()
+    private val carType: MutableLiveData<String> = MutableLiveData("Taxi")
 
-    val driver: LiveData<Driver> = Transformations.map(findDriverResponse){
+
+    val trip: LiveData<Trip> = Transformations.map(requestRideResponse){
+        Log.d("Trip", "Trip")
         it.data
     }
 
-    val driverLatLng: LiveData<LatLng> = Transformations.map(findDriverResponse){
-        it.data?.foundLocation
+    val driverLatLng: LiveData<LatLng> = Transformations.map(requestRideResponse){
+        it.data?.driver?.foundLocation
     }
 
     val driverDirection: LiveData<Direction> = Transformations.map(driverDirectionResponse){
@@ -66,6 +72,20 @@ class MainViewModel(private val repository: MainRepository) : ViewModel(){
     }
 
     val carIconResource: MutableLiveData<Int> = MutableLiveData(R.drawable.taxi_car_icon)
+
+    val paymentMethod: MutableLiveData<String> = MutableLiveData("Visa")
+
+    val couponList: LiveData<List<Coupon>> = Transformations.map(couponListResponse){
+        it.data
+    }
+
+    val fareCouponApplied: MutableLiveData<Double> = MutableLiveData()
+
+    val currentCoupon: MutableLiveData<Coupon> = MutableLiveData()
+
+    val submitRatingStatus: LiveData<Boolean> = Transformations.map(submitRatingResponse){
+        it.status
+    }
 
     fun getAutoCompleteSuggestion(query: String, placesClient: PlacesClient){
         repository.getAutocompleteSuggestions(query, placesClient, fun(response: ApiResponse<List<AutocompletePrediction>>){
@@ -115,21 +135,25 @@ class MainViewModel(private val repository: MainRepository) : ViewModel(){
     fun changeCarOption(option: String){
         when(option){
             "taxi" -> {
+                carType.value = "Taxi"
                 carSize.value = 4
                 fareEstimated.value = (minutesDuration.value)?.toDouble()
                 carIconResource.value = R.drawable.taxi_car_icon
             }
             "superx" -> {
+                carType.value = "SuperX"
                 carSize.value = 4
                 fareEstimated.value = (minutesDuration.value?.times(2))?.toDouble()
                 carIconResource.value = R.drawable.superx_car_icon
             }
             "black" -> {
+                carType.value = "Black"
                 carSize.value = 6
                 fareEstimated.value = (minutesDuration.value?.times(4))?.toDouble()
                 carIconResource.value = R.drawable.black_car_icon
             }
             "suv" -> {
+                carType.value = "SUV"
                 carSize.value = 8
                 fareEstimated.value = (minutesDuration.value?.times(6))?.toDouble()
                 carIconResource.value = R.drawable.suv_car_icon
@@ -137,16 +161,28 @@ class MainViewModel(private val repository: MainRepository) : ViewModel(){
         }
     }
 
-    fun findDriver(){
-        originDestination.value?.origin?.let {
-            repository.findDriver(it, fun(response: ApiResponse<Driver>){
-                CoroutineScope(Main).launch {
-                    findDriverResponse.value = response
-                }
 
-            })
-        }
+    fun requestRide(){
+        val fare = if(currentCoupon.value != null) fareCouponApplied.value!! else fareEstimated.value!!
+        repository.requestRide(
+            originDestination = originDestination.value!!,
+            fare =  fare,
+            direction = direction.value!!,
+            paymentMethod = paymentMethod.value!!,
+            carType = carType.value!!,
+            coupon = currentCoupon.value,
+            callback = fun(response: ApiResponse<Trip>){
+                if(response.status!!) {
+                    Log.d("Trip", "Trip: ${response.data}")
+                    requestRideResponse.value = response
+                }
+                else errorMsg.value = response.message
+            }
+        )
     }
+
+
+
 
     fun getDriverDirection(){
         driverLatLng.value?.let{
@@ -172,5 +208,44 @@ class MainViewModel(private val repository: MainRepository) : ViewModel(){
         return "$hourString$minuteString"
     }
 
+    fun setPaymentMethod(method: String){
+        paymentMethod.value = method
+    }
+
+    fun getCoupons(){
+        repository.getCoupons {
+            couponListResponse.value = it
+        }
+    }
+
+    fun pickCoupon(coupon: Coupon){
+        currentCoupon.value = coupon
+        val newFare = fareEstimated.value?.times(100.minus(coupon.discount!!))?.div(100)
+        fareCouponApplied.value = newFare
+    }
+
+    fun saveTripPreviewBitmap(preview: Bitmap){
+        repository.saveTripPreviewBitmap(preview)
+    }
+
+    fun saveTrip(){
+        repository.saveTripToDatabase(trip.value) {
+            if(!it.status!!){
+                errorMsg.value = it.message
+            }
+        }
+    }
+
+    fun submitRating(rating: Double){
+        Log.d("FireStore", "HERE")
+        trip.value?.driver?.let { driver ->
+            Log.d("FireStore", "HERE2")
+            repository.submitRating(rating, driver){
+                submitRatingResponse.value = it
+                if(it.status!!) errorMsg.value = it.message
+            }
+        }
+
+    }
 }
 

@@ -2,9 +2,7 @@ package com.nguyen.asuper.repository
 
 import android.net.Uri
 import android.util.Log
-import com.nguyen.asuper.data.ApiResponse
-import com.nguyen.asuper.data.Location
-import com.nguyen.asuper.data.User
+import com.nguyen.asuper.data.*
 import com.nguyen.asuper.util.FirebaseUtil
 import com.nguyen.asuper.util.SavedSharedPreferences
 import com.nguyen.asuper.util.SavedSharedPreferences.currentLoggedUser
@@ -37,8 +35,8 @@ class AuthRepository{
                             uploadAvatar(user.uid, avatar, fun(uriString: String){
                                 currentLoggedUser = User(user.uid, username, email, avatar = uriString)
                                 insertOrUpdateUser(fun(result: Boolean){
-                                    if (result) callback.invoke(ApiResponse(200, "Register Successfully!", true))
-                                    else callback.invoke(ApiResponse(null, "Cannot register at the moment!", false))
+                                    if (result) callback.invoke(ApiResponse(200, "Update Successfully!", true))
+                                    else callback.invoke(ApiResponse(null, "Cannot update at the moment!", false))
                                 })
                             })
                         } else {
@@ -131,7 +129,9 @@ class AuthRepository{
                 "username" to it.username,
                 "home" to home,
                 "work" to work,
-                "avatar" to it.avatar
+                "avatar" to it.avatar,
+                "used_coupons" to it.usedCoupons,
+                "trips" to it.trips
             )
             FirebaseUtil.getDb().collection("users").document(it.id!!)
                 .set(user)
@@ -144,7 +144,6 @@ class AuthRepository{
                     callback.invoke(false)
                 }
         }
-
     }
 
     private fun getUser(id: String, callback: (user: User) -> Unit) {
@@ -161,11 +160,12 @@ class AuthRepository{
                         document.data?.get("email") as String?,
                         home,
                         work,
-                        document.data?.get("avatar") as String?
+                        document.data?.get("avatar") as String?,
+                        document.data?.get("used_coupon") as HashMap<String, Boolean>?
                     )
                     callback.invoke(user)
                 } else {
-                    Log.d("FireStore", "No such user")
+                    Log.d("FireStore", "Not found user")
                 }
             }
             .addOnFailureListener { exception ->
@@ -206,6 +206,9 @@ class AuthRepository{
                 }
             }
     }
+
+
+
 
 
 

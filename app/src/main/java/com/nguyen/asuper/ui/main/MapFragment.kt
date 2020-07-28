@@ -53,6 +53,7 @@ class MapFragment : Fragment(), OnMapReadyCallback, LocationListener {
     private lateinit var originEditText: EditText
     private lateinit var destinationEditText: EditText
 
+
     private var mapFragment: SupportMapFragment? = null
     private var originMarker: Marker? = null
     private var destinationMarker: Marker? = null
@@ -61,7 +62,11 @@ class MapFragment : Fragment(), OnMapReadyCallback, LocationListener {
     private var driverPolyline: Polyline? = null
     private var carIconResource: Int = R.drawable.taxi_car_icon
 
+    private var mainHandler: Handler? = null
+
     private val mainViewModel by viewModel<MainViewModel>()
+
+
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreateView(
@@ -70,6 +75,7 @@ class MapFragment : Fragment(), OnMapReadyCallback, LocationListener {
     ): View? {
         val binding = FragmentMapBinding.inflate(inflater, container, false)
 
+        Log.d("Map", "On Create view map fragment!")
         originEditText = binding.origin
         destinationEditText = binding.destination
 
@@ -126,13 +132,33 @@ class MapFragment : Fragment(), OnMapReadyCallback, LocationListener {
         }
 
         binding.paymentMenu.requestButton.setOnClickListener {
-            binding.paymentVisibility = false
-            binding.backButton.visibility = View.GONE
-            binding.mapRadar.setShowCircles(true)
-            binding.mapRadar.visibility = View.VISIBLE
-            binding.mapRadar.startAnimation()
-            mainViewModel.findDriver()
+            binding.apply {
+                paymentVisibility = false
+                backButton.visibility = View.GONE
+                mapRadar.setShowCircles(true)
+                mapRadar.visibility = View.VISIBLE
+                mapRadar.startAnimation()
+            }
+            mMap.uiSettings.isScrollGesturesEnabled = false
+            mMap.moveCamera(CameraUpdateFactory.newLatLng(originMarker?.position))
+
+
+            mainViewModel.requestRide()
         }
+
+        binding.paymentMenu.switchPaymentButton.setOnClickListener {
+            showPaymentDialog()
+        }
+
+        binding.paymentMenu.chooseCouponButton.setOnClickListener {
+            //findNavController().navigate(R.id.coupon_fragment)
+            showCouponDialog()
+        }
+
+        binding.driverMenu.cancelButton.setOnClickListener {
+            cancelTrip(binding)
+        }
+
 
         val placesClient = Places.createClient(requireContext())
 
@@ -162,12 +188,25 @@ class MapFragment : Fragment(), OnMapReadyCallback, LocationListener {
 
         mainViewModel.originDestination.observe(viewLifecycleOwner, Observer {
             if(it.origin != null && it.destination != null){
+                binding.loadingIcon.visibility = View.VISIBLE
                 mainViewModel.getDirection(it.origin!!, it.destination!!)
             }
         })
 
         mainViewModel.direction.observe(viewLifecycleOwner, Observer {
-            drawDirection(it, binding)
+            drawDirection(it.routeList[0].overviewPolyline.pointList, binding)
+
+            val builder: LatLngBounds.Builder = LatLngBounds.builder()
+            builder.include(originMarker?.position)
+            builder.include(destinationMarker?.position)
+            val bounds = builder.build()
+
+            val cameraUpdate = CameraUpdateFactory.newLatLngBounds(bounds, 0)
+            mMap.animateCamera(cameraUpdate)
+            mMap.snapshot { bitmap ->
+                mainViewModel.saveTripPreviewBitmap(bitmap)
+            }
+            binding.loadingIcon.visibility = View.GONE
         })
 
         mainViewModel.directionStatus.observe(viewLifecycleOwner, Observer {
@@ -187,6 +226,11 @@ class MapFragment : Fragment(), OnMapReadyCallback, LocationListener {
             binding.paymentMenu.fare = "$$it"
         })
 
+        mainViewModel.fareCouponApplied.observe(viewLifecycleOwner, Observer {
+            binding.minFare.text = "$$it"
+            binding.paymentMenu.fare = "$$it"
+        })
+
         mainViewModel.carSize.observe(viewLifecycleOwner, Observer {
             binding.carSize.text = "$it PEOPLE"
         })
@@ -196,6 +240,7 @@ class MapFragment : Fragment(), OnMapReadyCallback, LocationListener {
         })
 
         mainViewModel.driverDirection.observe(viewLifecycleOwner, Observer {
+            mMap.uiSettings.isScrollGesturesEnabled = true
             simulateDriverComing(it.routeList[0].overviewPolyline.pointList as ArrayList<LatLng>, binding)
         })
 
@@ -203,14 +248,26 @@ class MapFragment : Fragment(), OnMapReadyCallback, LocationListener {
             carIconResource = it
         })
 
-        mainViewModel.driver.observe(viewLifecycleOwner, Observer {
+        mainViewModel.currentCoupon.observe(viewLifecycleOwner, Observer {
+            binding.paymentMenu.chooseCouponButton.text = it.code
+        })
+
+        mainViewModel.trip.observe(viewLifecycleOwner, Observer {
             binding.driverVisibility = true
             binding.driverMenu.cancelable = true
-            binding.driverMenu.driver = it
+            binding.driverMenu.driver = it.driver
             binding.mapRadar.stopAnimation()
             binding.mapRadar.visibility = View.GONE
         })
 
+        mainViewModel.paymentMethod.observe(viewLifecycleOwner, Observer {
+            binding.paymentMenu.payment = it
+            when(it){
+                "Visa/Debit Card" -> binding.paymentMenu.paymentIcon.setImageResource(R.drawable.visa_icon)
+                "Google Pay" -> binding.paymentMenu.paymentIcon.setImageResource(R.drawable.google_pay_icon)
+                "Apple Pay" -> binding.paymentMenu.paymentIcon.setImageResource(R.drawable.apple_pay_icon)
+            }
+        })
 
         workOnClick(binding)
         homeOnClick(binding)
@@ -276,8 +333,10 @@ class MapFragment : Fragment(), OnMapReadyCallback, LocationListener {
     }
 
     override fun onMapReady(googleMap: GoogleMap) {
+        if(this::mMap.isInitialized) return
+        Log.d("Map", "Map Ready!")
         mMap = googleMap
-
+        mMap.setMinZoomPreference(15f)
         try {
             googleMap.setMapStyle(
                 MapStyleOptions.loadRawResourceStyle(
@@ -291,8 +350,7 @@ class MapFragment : Fragment(), OnMapReadyCallback, LocationListener {
         Log.d("Map", "Ready: $currentUserLatitude $currentUserLongitude")
         val currentLocation = LatLng(currentUserLatitude, currentUserLongitude)
         originMarker = mMap.addMarker(MarkerOptions().position(currentLocation).title("Current location").icon(BitmapDescriptorFactory.fromResource(R.drawable.origin_icon)))
-        mMap.moveCamera(CameraUpdateFactory.newLatLng(currentLocation))
-        mMap.setMinZoomPreference(17f)
+        mMap.animateCamera(CameraUpdateFactory.newLatLng(currentLocation))
     }
 
 
@@ -346,7 +404,7 @@ class MapFragment : Fragment(), OnMapReadyCallback, LocationListener {
             val currentLocation = LatLng(it.latitude, it.longitude)
             originMarker?.remove()
             originMarker = mMap.addMarker(MarkerOptions().position(currentLocation).title("Current location").icon(BitmapDescriptorFactory.fromResource(R.drawable.origin_icon)))
-            mMap.moveCamera(CameraUpdateFactory.newLatLng(currentLocation))
+            mMap.animateCamera(CameraUpdateFactory.newLatLng(currentLocation))
         }
     }
 
@@ -500,8 +558,6 @@ class MapFragment : Fragment(), OnMapReadyCallback, LocationListener {
 
         originMarker = mMap.addMarker(MarkerOptions().position(points[0]).title("Pick up location").icon(BitmapDescriptorFactory.fromResource(R.drawable.origin_icon)))
         destinationMarker = mMap.addMarker(MarkerOptions().position(points[points.size - 1]).title("Destination").icon(BitmapDescriptorFactory.fromResource(R.drawable.destination_icon)))
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(points[0], 4f))
-
         polyline?.remove()
         val options = PolylineOptions()
             .clickable(true)
@@ -516,9 +572,9 @@ class MapFragment : Fragment(), OnMapReadyCallback, LocationListener {
 
     private fun simulateDriverComing(points: ArrayList<LatLng>, binding: FragmentMapBinding){
 
-        val mainHandler = Handler(Looper.getMainLooper())
+        mainHandler = Handler(Looper.getMainLooper())
 
-        mainHandler.post(object : Runnable {
+        mainHandler!!.post(object : Runnable {
             override fun run() {
                 driverPolyline?.remove()
 
@@ -532,7 +588,6 @@ class MapFragment : Fragment(), OnMapReadyCallback, LocationListener {
                 driverPolyline?.startCap = driverCap
                 points.removeAt(0)
                 if(points.isEmpty()) {
-                    notifyUserWhenDriverCome(binding)
                     driverMarker?.remove()
                     driverMarker =
                         mMap.addMarker(
@@ -540,24 +595,23 @@ class MapFragment : Fragment(), OnMapReadyCallback, LocationListener {
                                 .position(originMarker?.position!!)
                                 .icon(BitmapDescriptorFactory.fromResource(carIconResource))
                         )
-                    simulateDriverGoing(polyline?.points as ArrayList<LatLng>)
+
+                    binding.driverMenu.cancelable = false
+                    showDriverNotifyDialog(polyline?.points as ArrayList<LatLng>, binding)
                     return
                 }
-                mainHandler.postDelayed(this, 2000)
+                mainHandler!!.postDelayed(this, 2000)
             }
         })
-    }
 
-    private fun notifyUserWhenDriverCome(binding: FragmentMapBinding){
-        binding.driverMenu.cancelable = false
     }
 
 
-    private fun simulateDriverGoing(points: ArrayList<LatLng>){
+    private fun simulateDriverGoing(points: ArrayList<LatLng>, binding: FragmentMapBinding){
 
-        val mainHandler = Handler(Looper.getMainLooper())
+        mainHandler = Handler(Looper.getMainLooper())
 
-        mainHandler.post(object : Runnable {
+        mainHandler!!.post(object : Runnable {
             override fun run() {
                 driverMarker?.remove()
                 polyline?.remove()
@@ -569,9 +623,10 @@ class MapFragment : Fragment(), OnMapReadyCallback, LocationListener {
                 polyline?.color = Color.parseColor("#74BFFF")
                 val driverCap = CustomCap(BitmapDescriptorFactory.fromResource(carIconResource), 4f)
                 polyline?.startCap = driverCap
-                mMap.moveCamera(CameraUpdateFactory.newLatLng(points[0]))
+                //mMap.moveCamera(CameraUpdateFactory.newLatLng(points[0]))
                 points.removeAt(0)
                 if(points.isEmpty()) {
+                    mainViewModel.saveTrip()
                     driverMarker?.remove()
                     driverMarker =
                         mMap.addMarker(
@@ -579,12 +634,55 @@ class MapFragment : Fragment(), OnMapReadyCallback, LocationListener {
                                 .position(destinationMarker?.position!!)
                                 .icon(BitmapDescriptorFactory.fromResource(carIconResource))
                         )
+                    resetLayout(binding)
+                    showDriverRatingDialog()
                     return
                 }
-                mainHandler.postDelayed(this, 1000)
+                mainHandler!!.postDelayed(this, 1000)
             }
         })
     }
+
+
+    private fun showPaymentDialog() {
+        val newFragment = PaymentDialogFragment(mainViewModel)
+        newFragment.show(childFragmentManager, "payment")
+    }
+
+    private fun showCouponDialog() {
+        val newFragment = CouponDialogFragment(mainViewModel)
+        newFragment.show(childFragmentManager, "coupon")
+    }
+
+    private fun showDriverNotifyDialog(points: ArrayList<LatLng>, binding: FragmentMapBinding) {
+        val newFragment = DriverNotifyDialogFragment(mainViewModel, fun(){
+            simulateDriverGoing(points, binding)
+        })
+        newFragment.show(childFragmentManager, "driver")
+    }
+
+    private fun showDriverRatingDialog(){
+        val newFragment = DriverTripSummaryDialogFragment(mainViewModel)
+        newFragment.show(childFragmentManager, "summary")
+    }
+
+    private fun resetLayout(binding: FragmentMapBinding) {
+        binding.driverVisibility = false
+        binding.searchBarGroup.visibility = View.VISIBLE
+        destinationMarker?.remove()
+        driverMarker?.remove()
+        driverPolyline?.remove()
+        polyline?.remove()
+        mainHandler?.removeCallbacksAndMessages(null);
+        mMap.animateCamera(CameraUpdateFactory.newLatLng(originMarker?.position))
+        (activity as MainActivity?)?.showActionBar()
+    }
+
+    private fun cancelTrip(binding: FragmentMapBinding) {
+        resetLayout(binding)
+    }
+
+
 
 
 

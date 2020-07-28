@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:paddingBottom="20dp">
+
+    <androidx.constraintlayout.widget.Group
+        android:id="@+id/visa"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        app:constraint_referenced_ids="visa_icon, visa_option"
+        app:layout_constraintBottom_toBottomOf="@+id/visa_icon"
+        app:layout_constraintTop_toTopOf="@+id/visa_icon" />
+
+    <TextView
+        android:id="@+id/textView12"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:fontFamily="@font/montserrat_bold"
+        android:text="Choose your payment"
+        android:textColor="@color/textColor"
+        android:textSize="20sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <androidx.constraintlayout.widget.Group
+        android:id="@+id/google_pay"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        app:constraint_referenced_ids="google_pay_icon, google_pay_option"
+        app:layout_constraintBottom_toBottomOf="@+id/google_pay_icon"
+        app:layout_constraintTop_toTopOf="@+id/google_pay_icon" />
+
+
+    <ImageView
+        android:id="@+id/visa_icon"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:layout_marginTop="20dp"
+        android:src="@drawable/visa_icon"
+        app:layout_constraintStart_toStartOf="@id/textView12"
+        app:layout_constraintTop_toBottomOf="@+id/textView12" />
+
+
+    <TextView
+        android:id="@+id/visa_option"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Visa/Debit card"
+        android:textSize="16dp"
+        android:textColor="@color/textColor"
+        android:fontFamily="@font/montserrat"
+        android:layout_marginStart="10dp"
+        app:layout_constraintBottom_toBottomOf="@+id/visa_icon"
+        app:layout_constraintStart_toEndOf="@+id/visa_icon"
+        app:layout_constraintTop_toTopOf="@+id/visa_icon" />
+
+
+    <androidx.constraintlayout.widget.Group
+        android:id="@+id/apple_pay"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        app:constraint_referenced_ids="apple_pay_icon, apple_pay_option"
+        app:layout_constraintBottom_toBottomOf="@+id/apple_pay_icon"
+        app:layout_constraintTop_toTopOf="@+id/apple_pay_icon" />
+
+    <ImageView
+        android:id="@+id/google_pay_icon"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:layout_marginTop="20dp"
+        android:src="@drawable/google_pay_icon"
+        app:layout_constraintStart_toStartOf="@+id/visa_icon"
+        app:layout_constraintTop_toBottomOf="@+id/visa_icon" />
+
+    <TextView
+        android:id="@+id/google_pay_option"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:fontFamily="@font/montserrat"
+        android:text="Google Pay"
+        android:textColor="@color/textColor"
+        android:textSize="16dp"
+        android:layout_marginStart="10dp"
+        app:layout_constraintBottom_toBottomOf="@+id/google_pay_icon"
+        app:layout_constraintStart_toEndOf="@+id/google_pay_icon"
+        app:layout_constraintTop_toTopOf="@+id/google_pay_icon" />
+
+    <ImageView
+        android:id="@+id/apple_pay_icon"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:layout_marginTop="20dp"
+        android:src="@drawable/apple_pay_icon"
+        app:layout_constraintStart_toStartOf="@+id/google_pay_icon"
+        app:layout_constraintTop_toBottomOf="@+id/google_pay_icon" />
+
+    <TextView
+        android:id="@+id/apple_pay_option"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:fontFamily="@font/montserrat"
+        android:text="Apple Pay"
+        android:textColor="@color/textColor"
+        android:textSize="16dp"
+        android:layout_marginStart="10dp"
+        app:layout_constraintBottom_toBottomOf="@+id/apple_pay_icon"
+        app:layout_constraintStart_toEndOf="@+id/apple_pay_icon"
+        app:layout_constraintTop_toTopOf="@+id/apple_pay_icon" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

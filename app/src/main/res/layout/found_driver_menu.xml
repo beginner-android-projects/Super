@@ -20,7 +20,8 @@
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="wrap_content"
+        android:paddingBottom="10dp">
 
         <androidx.cardview.widget.CardView
             android:id="@+id/cardView4"
@@ -71,13 +72,13 @@
         <RatingBar
             android:id="@+id/ratingBar"
             android:layout_width="wrap_content"
-            android:layout_height="0dp"
+            android:layout_height="wrap_content"
             android:layout_marginStart="10dp"
             android:elevation="2dp"
             android:scaleX="0.6"
             android:scaleY="0.6"
+            android:isIndicator="true"
             android:rating="@{driver.rating.floatValue()}"
-            app:layout_constraintBottom_toBottomOf="@+id/user_avatar_post"
             app:layout_constraintStart_toEndOf="@+id/user_avatar_post"
             app:layout_constraintTop_toBottomOf="@+id/textView11" />
 

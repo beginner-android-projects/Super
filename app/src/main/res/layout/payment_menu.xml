@@ -8,6 +8,11 @@
             name="fare"
             type="String" />
 
+        <variable
+            name="payment"
+            type="String" />
+
+
     </data>
 
     <androidx.constraintlayout.widget.ConstraintLayout
@@ -38,29 +43,29 @@
 
 
         <ImageView
-            android:id="@+id/imageView4"
+            android:id="@+id/payment_icon"
             android:layout_width="50dp"
             android:layout_height="50dp"
             android:layout_margin="10dp"
             android:elevation="2dp"
-            android:src="@drawable/apple_pay_icon"
+            android:src="@drawable/visa_icon"
             app:layout_constraintBottom_toTopOf="@+id/view7"
             app:layout_constraintStart_toStartOf="@+id/cardView4"
             app:layout_constraintTop_toTopOf="@+id/cardView4" />
 
         <TextView
-            android:id="@+id/textView9"
+            android:id="@+id/switch_payment_button"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="5dp"
             android:layout_marginBottom="1dp"
             android:elevation="2dp"
             android:fontFamily="@font/montserrat"
-            android:text="Apple Pay"
+            android:text="@{payment}"
             android:textColor="@color/textColor"
             android:textSize="18sp"
             app:layout_constraintBottom_toTopOf="@+id/view7"
-            app:layout_constraintStart_toEndOf="@+id/imageView4"
+            app:layout_constraintStart_toEndOf="@+id/payment_icon"
             app:layout_constraintTop_toTopOf="@+id/cardView4" />
 
         <TextView
@@ -87,13 +92,17 @@
             app:layout_constraintStart_toStartOf="@+id/cardView4"
             app:layout_constraintTop_toBottomOf="@+id/view7" />
 
-        <EditText
+        <TextView
+            android:id="@+id/choose_coupon_button"
             android:layout_width="0dp"
             android:layout_height="0dp"
-            android:hint="Enter coupon"
             android:elevation="2dp"
             android:layout_marginHorizontal="5dp"
-            android:background="@null"
+            android:gravity="center_vertical"
+            android:textSize="16sp"
+            android:text="@string/choose_coupon"
+            android:textColor="@color/grey"
+            android:fontFamily="@font/montserrat"
             app:layout_constraintBottom_toBottomOf="@id/cardView4"
             app:layout_constraintEnd_toEndOf="@+id/cardView4"
             app:layout_constraintStart_toEndOf="@+id/imageView5"

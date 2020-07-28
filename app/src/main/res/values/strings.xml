@@ -33,4 +33,8 @@
     <string name="enter_pickup_location">Enter Pickup Location</string>
     <string name="work">Work</string>
     <string name="home">Home</string>
+    <string name="ok">Okay</string>
+    <string name="available_coupon">Available Coupons</string>
+    <string name="choose_coupon">Choose coupon</string>
+    <string name="leave_a_star">Leave a star!</string>
 </resources>

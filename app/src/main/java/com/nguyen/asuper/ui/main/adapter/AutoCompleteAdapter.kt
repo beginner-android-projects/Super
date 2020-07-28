@@ -91,9 +91,7 @@ class AutoCompleteAdapter(private val autoCompleteList: ArrayList<AutocompletePr
                     }
                 }
             }
-
         }
-
     }
 
     override fun getItemViewType(position: Int): Int {
