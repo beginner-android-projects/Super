@@ -10,14 +10,13 @@ import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.libraries.places.api.model.*
 import com.google.android.libraries.places.api.net.*
+import com.google.firebase.firestore.Query
 import com.nguyen.asuper.data.*
-import com.nguyen.asuper.di.repositoryModule
+import com.nguyen.asuper.repository.AuthRepository.Companion.currentUser
 import com.nguyen.asuper.util.FirebaseUtil
-import com.nguyen.asuper.util.SavedSharedPreferences
-import com.nguyen.asuper.util.SavedSharedPreferences.currentLoggedUser
-import com.nguyen.asuper.util.SavedSharedPreferences.currentUserLatitude
-import com.nguyen.asuper.util.SavedSharedPreferences.currentUserLongitude
-import java.time.LocalDateTime
+import com.nguyen.asuper.util.SavedSharedPreferences.currentUserLocation
+import com.nguyen.asuper.util.SavedSharedPreferences.mGson
+import java.io.ByteArrayOutputStream
 import java.util.*
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
@@ -25,22 +24,24 @@ import kotlin.collections.HashMap
 
 class MainRepository{
 
-    private var currentTripPreview: Bitmap? = null
 
     fun getAutocompleteSuggestions(query: String, placesClient: PlacesClient, callback: (ApiResponse<List<AutocompletePrediction>>) -> Unit){
         val token = AutocompleteSessionToken.newInstance()
 
         // Create a RectangularBounds object.
-        val bounds = RectangularBounds.newInstance(
-            LatLng(currentUserLatitude, currentUserLongitude),
-            LatLng(currentUserLatitude + 0.00001, currentUserLongitude + 0.00001)
-        )
+        val bounds = currentUserLocation?.let{ currentUserLocation ->
+             RectangularBounds.newInstance(
+                LatLng(currentUserLocation.lat!!, currentUserLocation.lng!!),
+                LatLng(currentUserLocation.lat!! + 0.00001, currentUserLocation.lng!! + 0.00001)
+            )
+        }
+
         // Use the builder to create a FindAutocompletePredictionsRequest.
         val request =
             FindAutocompletePredictionsRequest.builder()
                 // Call either setLocationBias() OR setLocationRestriction().
                 .setLocationBias(bounds)
-                .setOrigin(LatLng(currentUserLatitude, currentUserLongitude))
+                .setOrigin(LatLng(currentUserLocation?.lat!!, currentUserLocation?.lng!!))
                 .setTypeFilter(TypeFilter.ADDRESS)
                 .setSessionToken(token)
                 .setQuery(query)
@@ -84,19 +85,18 @@ class MainRepository{
         if(coupon != null) {
             applyCoupon(coupon, fun(result) {
                 if (result) {
-                    findDriver(originDestination.origin!!, fun(driver: Driver?){
+                    findDriver(LatLng(originDestination.origin?.lat!!, originDestination.origin?.lng!!), fun(driver: Driver?){
                         if(driver != null){
                             val trip = Trip(
                                 id = UUID.randomUUID().toString(),
                                 originDestination = originDestination,
                                 date = Calendar.getInstance().time,
-                                direction = direction,
                                 driver = driver,
+                                userId = currentUser.id!!,
                                 carType = carType,
                                 paymentMethod = paymentMethod,
                                 fare = fare,
-                                couponUsed = coupon,
-                                preview = currentTripPreview
+                                couponUsed = coupon
                             )
                             callback.invoke(ApiResponse(200, "Request Ride successfully!", true, trip))
                         } else callback.invoke(ApiResponse(null, "Couldn't find a driver!", false))
@@ -107,26 +107,22 @@ class MainRepository{
             })
         } else {
             //Finding the driver
-            findDriver(originDestination.origin!!, fun(driver: Driver?){
+            findDriver(LatLng(originDestination.origin?.lat!!, originDestination.origin?.lng!!), fun(driver: Driver?){
                 if(driver != null){
                     val trip = Trip(
                         id = UUID.randomUUID().toString(),
                         originDestination = originDestination,
                         date = Calendar.getInstance().time,
-                        direction = direction,
                         driver = driver,
+                        userId = currentUser.id!!,
                         carType = carType,
                         paymentMethod = paymentMethod,
-                        fare = fare,
-                        preview = currentTripPreview
+                        fare = fare
                     )
                     callback.invoke(ApiResponse(200, "Request Ride successfully!", true, trip))
                 } else callback.invoke(ApiResponse(null, "Couldn't find a driver!", false, null))
             })
         }
-
-
-
     }
 
 
@@ -168,7 +164,7 @@ class MainRepository{
                 querySnapshot.documents.forEach {
                     drivers.add(Driver(
                         it.data?.get("driver_id") as String,
-                        it.data?.get("name") as String?,
+                        it.data?.get("name") as String,
                         it.data?.get("avatar") as String?,
                         it.data?.get("rating") as Double,
                         it.data?.get("rating_count") as Long,
@@ -183,32 +179,26 @@ class MainRepository{
             }
     }
 
-    private fun insertOrUpdateUser(callback: (Boolean) -> Unit){
-        currentLoggedUser?.let {
-            val home = SavedSharedPreferences.mGson.toJson(it.home)
-            val work = SavedSharedPreferences.mGson.toJson(it.work)
-            Log.d("FireStore", "$home and $work and ${it.trips}")
-            val user = hashMapOf(
-                "user_id" to it.id,
-                "username" to it.username,
-                "home" to home,
-                "work" to work,
-                "avatar" to it.avatar,
-                "used_coupons" to it.usedCoupons,
-                "trips" to it.trips
-            )
-            FirebaseUtil.getDb().collection("users").document(it.id!!)
-                .set(user)
-                .addOnSuccessListener {
-                    Log.d("FireStore", "Add/Update user successfully")
-                    callback.invoke(true)
-                }
-                .addOnFailureListener { e ->
-                    Log.d("FireStore", "Fail to add/update user", e)
-                    callback.invoke(false)
-                }
-        }
-
+    private fun insertOrUpdateUser(newUser: User, callback: (Boolean) -> Unit){
+        val user = hashMapOf(
+            "user_id" to newUser.id,
+            "username" to newUser.username,
+            "email" to newUser.email,
+            "home" to newUser.home,
+            "work" to newUser.work,
+            "avatar" to newUser.avatar
+        )
+        FirebaseUtil.getDb().collection("users").document(newUser.id!!)
+            .set(user)
+            .addOnSuccessListener {
+                Log.d("FireStore", "Add/Update user successfully")
+                currentUser = newUser
+                callback.invoke(true)
+            }
+            .addOnFailureListener { e ->
+                Log.d("FireStore", "Fail to add/update user", e)
+                callback.invoke(false)
+            }
     }
 
 
@@ -216,31 +206,28 @@ class MainRepository{
         FirebaseUtil.getDb().collection("Coupon")
             .get()
             .addOnSuccessListener { querySnapshot ->
-                val user = currentLoggedUser?.copy()
                 val couponList: ArrayList<Coupon> = ArrayList()
                 querySnapshot.documents.forEach {
-                    if(user?.usedCoupons == null) user?.usedCoupons = HashMap()
                     val  coupon = Coupon(
-                        it.data?.get("id") as String,
-                        it.data?.get("name") as String,
-                        it.data?.get("code") as String,
-                        it.data?.get("description") as String,
-                        it.data?.get("discount") as Long,
-                        it.data?.get("background_image") as String
+                        it.data?.get("id") as String?,
+                        it.data?.get("name") as String?,
+                        it.data?.get("code") as String?,
+                        it.data?.get("description") as String?,
+                        it.data?.get("discount") as Long?,
+                        it.data?.get("background_image") as String?,
+                        it.data?.get("user_used") as HashMap<String, Boolean>?
                     )
-                    if(user?.usedCoupons!![coupon.id!!] == null){
-                        user?.usedCoupons!![coupon.id!!] = false
-                        couponList.add(coupon)
-                    } else if(user?.usedCoupons!![coupon.id!!] == false){
+
+                    coupon.userUsed?.let{userUsed ->
+                        if(userUsed[currentUser.id] == null){
+                            couponList.add(coupon)
+                        }
+                    } ?: run {
                         couponList.add(coupon)
                     }
                 }
-
-                currentLoggedUser = user
-                insertOrUpdateUser{
-                    if (it) callback.invoke(ApiResponse(200, "get coupons successfully", true, couponList))
-                    else callback.invoke(ApiResponse(null, "Fail to get coupons", false))
-                }
+                Log.d("FireStore", "couponList: ${couponList.size}")
+                callback.invoke(ApiResponse(null, "Getting coupon list successfully", true, couponList))
             }
             .addOnFailureListener { exception ->
                 callback.invoke(ApiResponse(null, exception.message, false))
@@ -249,22 +236,40 @@ class MainRepository{
 
 
     private fun applyCoupon(coupon: Coupon, callback: (Boolean) -> Unit){
-        val user = currentLoggedUser?.copy()
-        user?.usedCoupons?.put(coupon.id!!, true)
-        currentLoggedUser = user
+        val userUsed: HashMap<String, Boolean> = if(coupon.userUsed == null) HashMap() else coupon.userUsed!!
+        currentUser.id?.let { userUsed.put(it, true) }
 
-        insertOrUpdateUser {
-            if(it){
-                callback.invoke(true)
-            } else {
-                callback.invoke(false)
-            }
+        val couponApplied = hashMapOf(
+            "background_image" to coupon.backgroundImg,
+            "code" to coupon.code,
+            "description" to coupon.description,
+            "discount" to coupon.discount,
+            "id" to coupon.id,
+            "name" to coupon.name,
+            "user_used" to userUsed
+        )
+
+        coupon.id?.let {
+            FirebaseUtil.getDb().collection("Coupon").document(it)
+                .set(couponApplied)
+                .addOnSuccessListener {
+                    Log.d("FireStore", "Apply coupon successfully!")
+                    callback.invoke(true)
+                }
+                .addOnFailureListener { e ->
+                    Log.d("FireStore", "Fail to apply coupon ${e.message}")
+                    callback.invoke(false)
+                }
         }
     }
 
     fun submitRating(rating: Double, driver: Driver, callback: (ApiResponse<Unit>) -> Unit){
-        val newRatingCount = driver.ratingCount + 1
-        val newRating = (driver.rating?.times(driver.ratingCount)?.plus(rating))?.div(newRatingCount)
+        val newRatingCount = driver.ratingCount?.plus(1)
+        val newRating = newRatingCount?.let {
+            (driver.ratingCount?.let { driver.rating?.times(it)?.plus(rating) })?.div(
+                it
+            )
+        }
 
         val updatedDriver = hashMapOf(
             "avatar" to driver.avatar,
@@ -274,59 +279,124 @@ class MainRepository{
             "rating_count" to newRatingCount
         )
 
-        FirebaseUtil.getDb().collection("drivers").document(driver.id)
-            .set(updatedDriver)
-            .addOnSuccessListener {
-                Log.d("FireStore", "Submit Rating successfully")
-                callback.invoke(ApiResponse(null, "Submit rating successfully", true))
-            }
-            .addOnFailureListener { e ->
-                Log.d("FireStore", "Fail to submit rating")
-                callback.invoke(ApiResponse(null, e.message, false))
-            }
+        driver.id?.let {
+            FirebaseUtil.getDb().collection("drivers").document(it)
+                .set(updatedDriver)
+                .addOnSuccessListener {
+                    Log.d("FireStore", "Submit Rating successfully")
+                    callback.invoke(ApiResponse(null, "Submit rating successfully", true))
+                }
+                .addOnFailureListener { e ->
+                    Log.d("FireStore", "Fail to submit rating")
+                    callback.invoke(ApiResponse(null, e.message, false))
+                }
+        }
     }
 
-    fun saveTripToDatabase(trip: Trip?, callback : (ApiResponse<Unit>) -> Unit){
-        if (trip == null) callback.invoke(ApiResponse(null, "The trip cannot be null", false))
-        currentLoggedUser?.let {
-            val user = it.copy()
-            val trips = (if(it.trips == null || it.trips?.size == 0) HashMap() else user.trips!!)
-            trips[trip!!.id] = true
-            user.trips = trips
-            currentLoggedUser = user
-            insertOrUpdateUser{result ->
-                if(result) {
-                    val newTrip = hashMapOf(
-                        "trip_id" to trip.id,
-                        "date" to trip.date,
-                        "driver" to trip.driver,
-                        "direction" to trip.direction,
-                        "origin_destination" to trip.originDestination,
-                        "fare" to trip.fare,
-                        "car_type" to trip.carType,
-                        "coupon_used" to trip.couponUsed,
-                        "payment_method" to trip.paymentMethod,
-                        "preview_image" to SavedSharedPreferences.mGson.toJson(trip.preview)
-                    )
-                    FirebaseUtil.getDb().collection("trips").document(trip!!.id)
-                        .set(newTrip)
-                        .addOnSuccessListener {
-                            Log.d("FireStore", "Add trip successfully")
-                            callback.invoke(ApiResponse(null, "Save trip successfully", true))
-                        }
-                        .addOnFailureListener { e ->
-                            Log.d("FireStore", "Fail to add trip", e)
-                            callback.invoke(ApiResponse(null, e.message, false))
-                        }
-                }
-                else callback.invoke(ApiResponse(null, "The trip cannot be saved", false))
+    fun saveTripToDatabase(trip: Trip, tripPreviewBitmap: Bitmap?, callback : (ApiResponse<Unit>) -> Unit){
+
+        saveTripPreview(trip.id, tripPreviewBitmap) {
+            val newTrip = hashMapOf(
+                "trip_id" to trip.id,
+                "date" to trip.date,
+                "driver" to trip.driver,
+                "user_id" to trip.userId,
+                "origin_destination" to trip.originDestination,
+                "fare" to trip.fare,
+                "car_type" to trip.carType,
+                "coupon_used" to trip.couponUsed,
+                "payment_method" to trip.paymentMethod,
+                "preview_image" to it
+            )
+
+            trip.id?.let {
+                FirebaseUtil.getDb().collection("trips").document(it)
+                    .set(newTrip)
+                    .addOnSuccessListener {
+                        Log.d("FireStore", "Add trip successfully")
+                        callback.invoke(ApiResponse(null, "Save trip successfully", true))
+                    }
+                    .addOnFailureListener { e ->
+                        Log.d("FireStore", "Fail to add trip", e)
+                        callback.invoke(ApiResponse(null, e.message, false))
+                    }
             }
         }
 
     }
 
 
-    fun saveTripPreviewBitmap(preview: Bitmap){
-        currentTripPreview = preview
+    fun getTripHistory(callback: (ApiResponse<List<Trip>>) -> Unit){
+        FirebaseUtil.getDb().collection("trips").whereEqualTo("user_id", currentUser.id).orderBy("date", Query.Direction.DESCENDING)
+            .get()
+            .addOnSuccessListener { querySnapshot ->
+                val tripsList: ArrayList<Trip> = ArrayList()
+                querySnapshot.documents.forEach{
+                    val trip = Trip(
+                        id = it.data?.get("trip_id") as String?,
+                        date = it.getTimestamp("date")?.toDate(),
+                        driver = mGson.fromJson(mGson.toJsonTree(it.data?.get("driver")), Driver::class.java),
+                        userId = it.data?.get("user_id") as String?,
+                        originDestination = mGson.fromJson(mGson.toJsonTree(it.data?.get("origin_destination")), OriginDestination::class.java),
+                        fare = it.data?.get("fare") as Double?,
+                        couponUsed = mGson.fromJson(mGson.toJsonTree(it.data?.get("coupon_used")), Coupon::class.java),
+                        carType = it.data?.get("car_type") as String?,
+                        paymentMethod = it.data?.get("payment_method") as String?,
+                        preview = it.data?.get("preview_image") as String?
+                    )
+                    Log.d("FireStore", "trip: $trip")
+                    tripsList.add(trip)
+                }
+
+                Log.d("FireStore", "tripsList: ${tripsList.size}")
+                callback.invoke(ApiResponse(200, "Getting trip history successfully!", true, tripsList))
+            }
+            .addOnFailureListener { exception ->
+                Log.d("FireStore", "Fail to get trip history: ${exception.message}")
+                callback.invoke(ApiResponse(null, exception.message, false))
+            }
+    }
+
+    private fun saveTripPreview(tripId: String?, preview: Bitmap?, callback: (uri: String) -> Unit){
+        if(tripId == null || preview == null) {
+            callback.invoke("")
+            return
+        }
+        Log.d("FireStore", "Uploading preview...")
+        val baos = ByteArrayOutputStream()
+        preview.compress(Bitmap.CompressFormat.JPEG, 100, baos)
+        val data = baos.toByteArray()
+
+        val tripFolder = FirebaseUtil.getStorageRef().child("trips/${tripId}")
+        val uploadTask = tripFolder.putBytes(data)
+
+        uploadTask
+            .addOnSuccessListener {
+                Log.d("FireStore", "Upload preview success: ${it.storage}")
+            }
+            .addOnFailureListener{
+                Log.d("FireStore", "Fail: ${it.message}")
+            }
+            .continueWithTask { task ->
+                if (!task.isSuccessful) {
+                    task.exception?.let {
+                        throw it
+                    }
+                }
+                tripFolder.downloadUrl
+            }
+            .addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    val downloadUri = task.result
+                    Log.d("FireStore", "Uri: ${downloadUri.toString()}")
+                    downloadUri?.let {
+                        callback.invoke(it.toString())
+                    }
+
+                } else {
+                    // Handle failures
+                    Log.d("FireStore", "Fail to complete loading trip preview")
+                }
+            }
     }
 }

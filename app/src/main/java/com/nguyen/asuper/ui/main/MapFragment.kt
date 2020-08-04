@@ -4,9 +4,8 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.content.pm.PackageManager
 import android.graphics.Color
-import android.location.Location
+import android.location.*
 import android.location.LocationListener
-import android.location.LocationManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -24,24 +23,25 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.google.android.gms.maps.CameraUpdateFactory
-import com.google.android.gms.maps.GoogleMap
-import com.google.android.gms.maps.OnMapReadyCallback
-import com.google.android.gms.maps.SupportMapFragment
+import com.google.android.gms.location.*
+import com.google.android.gms.maps.*
 import com.google.android.gms.maps.model.*
 import com.google.android.libraries.places.api.Places
 import com.nguyen.asuper.R
+import com.nguyen.asuper.data.MapLocation
 import com.nguyen.asuper.databinding.FragmentMapBinding
+import com.nguyen.asuper.repository.AuthRepository.Companion.currentUser
 import com.nguyen.asuper.ui.MainActivity
 import com.nguyen.asuper.ui.main.adapter.AutoCompleteAdapter
-import com.nguyen.asuper.util.SavedSharedPreferences.currentLoggedUser
-import com.nguyen.asuper.util.SavedSharedPreferences.currentUserLatitude
-import com.nguyen.asuper.util.SavedSharedPreferences.currentUserLongitude
+import com.nguyen.asuper.util.SavedSharedPreferences.currentUserLocation
 import com.nguyen.asuper.viewmodels.MainViewModel
+import kotlinx.android.synthetic.main.fragment_map.*
 import org.koin.androidx.viewmodel.ext.android.viewModel
+import java.util.*
+import kotlin.collections.ArrayList
 
 
-class MapFragment : Fragment(), OnMapReadyCallback, LocationListener {
+class MapFragment : Fragment(), OnMapReadyCallback, LocationListener, GoogleMap.OnCameraMoveListener, GoogleMap.OnCameraIdleListener {
     companion object{
         var CURRENT_EDIT_TEXT = "ORIGIN"
         private const val LOCATION_REQUEST_CODE = 1
@@ -52,7 +52,7 @@ class MapFragment : Fragment(), OnMapReadyCallback, LocationListener {
     private lateinit var mMap: GoogleMap
     private lateinit var originEditText: EditText
     private lateinit var destinationEditText: EditText
-
+    private lateinit var binding: FragmentMapBinding
 
     private var mapFragment: SupportMapFragment? = null
     private var originMarker: Marker? = null
@@ -66,6 +66,8 @@ class MapFragment : Fragment(), OnMapReadyCallback, LocationListener {
 
     private val mainViewModel by viewModel<MainViewModel>()
 
+    private var onStopFlag = false
+    private var dragMarkerFlag = false
 
 
     @SuppressLint("ClickableViewAccessibility")
@@ -73,7 +75,11 @@ class MapFragment : Fragment(), OnMapReadyCallback, LocationListener {
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        val binding = FragmentMapBinding.inflate(inflater, container, false)
+
+
+
+        binding = FragmentMapBinding.inflate(inflater, container, false)
+
 
         Log.d("Map", "On Create view map fragment!")
         originEditText = binding.origin
@@ -81,14 +87,16 @@ class MapFragment : Fragment(), OnMapReadyCallback, LocationListener {
 
         binding.currentOption = "taxi"
 
-        currentLoggedUser?.home?.let {
+        Log.d("Map", "current user: $currentUser")
+
+        currentUser.home?.let {
             binding.homeGroup.visibility = View.VISIBLE
             binding.home = it
         } ?: run {
             binding.homeGroup.visibility = View.GONE
         }
 
-        currentLoggedUser?.work?.let {
+        currentUser.work?.let {
             binding.workGroup.visibility = View.VISIBLE
             binding.work = it
         } ?: run {
@@ -97,6 +105,10 @@ class MapFragment : Fragment(), OnMapReadyCallback, LocationListener {
 
         binding.closeHomeAndWork.setOnClickListener {
             binding.homeAndWork.visibility = View.GONE
+        }
+
+        binding.closeSearchResult.setOnClickListener {
+            binding.searchResultsContainer.visibility = View.GONE
         }
 
         binding.taxiOption.setOnClickListener{
@@ -166,7 +178,7 @@ class MapFragment : Fragment(), OnMapReadyCallback, LocationListener {
         mapFragment?.getMapAsync(this)
 
         checkPermission(Manifest.permission.ACCESS_FINE_LOCATION, fun(result: Boolean){
-            if(result) trackLocation()
+            if(result) getCurrentLocation()
         })
 
         val recyclerView = binding.autoCompleteRecyclerview
@@ -183,26 +195,22 @@ class MapFragment : Fragment(), OnMapReadyCallback, LocationListener {
         recyclerView.adapter = adapter
 
         mainViewModel.autoSuggestionsList.observe(viewLifecycleOwner, Observer {
+            if(onStopFlag) return@Observer
             adapter.switchList(it)
         })
 
         mainViewModel.originDestination.observe(viewLifecycleOwner, Observer {
+            if(onStopFlag) return@Observer
             if(it.origin != null && it.destination != null){
                 binding.loadingIcon.visibility = View.VISIBLE
-                mainViewModel.getDirection(it.origin!!, it.destination!!)
+                mainViewModel.getDirection(LatLng(it.origin!!.lat!!, it.origin!!.lng!!), LatLng(it.destination!!.lat!!, it.destination!!.lng!!))
             }
         })
 
         mainViewModel.direction.observe(viewLifecycleOwner, Observer {
+            if(onStopFlag) return@Observer
             drawDirection(it.routeList[0].overviewPolyline.pointList, binding)
 
-            val builder: LatLngBounds.Builder = LatLngBounds.builder()
-            builder.include(originMarker?.position)
-            builder.include(destinationMarker?.position)
-            val bounds = builder.build()
-
-            val cameraUpdate = CameraUpdateFactory.newLatLngBounds(bounds, 0)
-            mMap.animateCamera(cameraUpdate)
             mMap.snapshot { bitmap ->
                 mainViewModel.saveTripPreviewBitmap(bitmap)
             }
@@ -210,36 +218,45 @@ class MapFragment : Fragment(), OnMapReadyCallback, LocationListener {
         })
 
         mainViewModel.directionStatus.observe(viewLifecycleOwner, Observer {
+            if(onStopFlag) return@Observer
             binding.isError = it.not()
         })
 
         mainViewModel.directionMsg.observe(viewLifecycleOwner, Observer {
+            if(onStopFlag) return@Observer
             binding.mapErrorBar.errorMsg = it
         })
 
         mainViewModel.directionDuration.observe(viewLifecycleOwner, Observer {
+            if(onStopFlag) return@Observer
             binding.eta.text = it
         })
 
         mainViewModel.fareEstimated.observe(viewLifecycleOwner, Observer {
+            if(onStopFlag) return@Observer
             binding.minFare.text = "$$it"
             binding.paymentMenu.fare = "$$it"
         })
 
         mainViewModel.fareCouponApplied.observe(viewLifecycleOwner, Observer {
+            if(onStopFlag) return@Observer
             binding.minFare.text = "$$it"
             binding.paymentMenu.fare = "$$it"
         })
 
         mainViewModel.carSize.observe(viewLifecycleOwner, Observer {
+            if(onStopFlag) return@Observer
             binding.carSize.text = "$it PEOPLE"
         })
 
         mainViewModel.driverLatLng.observe(viewLifecycleOwner, Observer {
+            if(onStopFlag) return@Observer
             mainViewModel.getDriverDirection()
         })
 
         mainViewModel.driverDirection.observe(viewLifecycleOwner, Observer {
+            if(onStopFlag) return@Observer
+            Log.d("Map", "Before driver coming")
             mMap.uiSettings.isScrollGesturesEnabled = true
             simulateDriverComing(it.routeList[0].overviewPolyline.pointList as ArrayList<LatLng>, binding)
         })
@@ -249,18 +266,23 @@ class MapFragment : Fragment(), OnMapReadyCallback, LocationListener {
         })
 
         mainViewModel.currentCoupon.observe(viewLifecycleOwner, Observer {
-            binding.paymentMenu.chooseCouponButton.text = it.code
+            if(onStopFlag) return@Observer
+            if(it == null)binding.paymentMenu.chooseCouponButton.text = "Choose coupon"
+            else binding.paymentMenu.chooseCouponButton.text = it.code
         })
 
         mainViewModel.trip.observe(viewLifecycleOwner, Observer {
+            if(onStopFlag) return@Observer
             binding.driverVisibility = true
             binding.driverMenu.cancelable = true
             binding.driverMenu.driver = it.driver
+            binding.driverMenu.rating = it.driver?.rating
             binding.mapRadar.stopAnimation()
             binding.mapRadar.visibility = View.GONE
         })
 
         mainViewModel.paymentMethod.observe(viewLifecycleOwner, Observer {
+            Log.d("Map", "Payment: on change $onStopFlag")
             binding.paymentMenu.payment = it
             when(it){
                 "Visa/Debit Card" -> binding.paymentMenu.paymentIcon.setImageResource(R.drawable.visa_icon)
@@ -269,12 +291,14 @@ class MapFragment : Fragment(), OnMapReadyCallback, LocationListener {
             }
         })
 
+
         workOnClick(binding)
         homeOnClick(binding)
         currentLocationOnClick(binding)
 
         originEditText.addTextChangedListener(object : TextWatcher{
             override fun afterTextChanged(text: Editable?) {
+                if(onStopFlag) return
                 if(text.toString().isBlank()) binding.searchResultsContainer.visibility = View.GONE
                 else binding.searchResultsContainer.visibility = View.VISIBLE
                 mainViewModel.getAutoCompleteSuggestion(text.toString(), placesClient)
@@ -289,6 +313,7 @@ class MapFragment : Fragment(), OnMapReadyCallback, LocationListener {
 
         destinationEditText.addTextChangedListener(object : TextWatcher{
             override fun afterTextChanged(text: Editable?) {
+                if(onStopFlag) return
                 if(text.toString().isBlank()) binding.searchResultsContainer.visibility = View.GONE
                 else binding.searchResultsContainer.visibility = View.VISIBLE
                 mainViewModel.getAutoCompleteSuggestion(text.toString(), placesClient)
@@ -332,11 +357,19 @@ class MapFragment : Fragment(), OnMapReadyCallback, LocationListener {
         return binding.root
     }
 
+
+    override fun onStop() {
+        onStopFlag = true
+        super.onStop()
+    }
+
     override fun onMapReady(googleMap: GoogleMap) {
         if(this::mMap.isInitialized) return
         Log.d("Map", "Map Ready!")
         mMap = googleMap
         mMap.setMinZoomPreference(15f)
+        mMap.uiSettings.isCompassEnabled = false
+        mMap.uiSettings.isMapToolbarEnabled = false
         try {
             googleMap.setMapStyle(
                 MapStyleOptions.loadRawResourceStyle(
@@ -347,22 +380,47 @@ class MapFragment : Fragment(), OnMapReadyCallback, LocationListener {
         } catch (e: Exception) {
             Log.d("Map", "Can't find style. Error: ", e)
         }
-        Log.d("Map", "Ready: $currentUserLatitude $currentUserLongitude")
-        val currentLocation = LatLng(currentUserLatitude, currentUserLongitude)
-        originMarker = mMap.addMarker(MarkerOptions().position(currentLocation).title("Current location").icon(BitmapDescriptorFactory.fromResource(R.drawable.origin_icon)))
+        val currentLocation = currentUserLocation?.let {
+            LatLng(it.lat!!, it.lat!!)
+        } ?: run {
+            LatLng(0.0, 0.0)
+        }
+        originMarker = mMap.addMarker(MarkerOptions().position(currentLocation).draggable(false)
+                .title("Current location")
+                .icon(BitmapDescriptorFactory
+                .fromResource(R.drawable.origin_icon)))
         mMap.animateCamera(CameraUpdateFactory.newLatLng(currentLocation))
+
+        mMap.setOnMapLongClickListener {
+            if(binding.searchBarGroup.visibility == View.VISIBLE || dragMarkerFlag){
+                dragMarkerFlag = dragMarkerFlag.not()
+                if(dragMarkerFlag){
+                    mMap.uiSettings.isZoomGesturesEnabled = false
+                    Toast.makeText(requireContext(), "You are in dragging mode! Long press again to exit this mode.", Toast.LENGTH_SHORT).show()
+                    (activity as MainActivity?)?.hideActionBar()
+                    mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(originMarker?.position, 18f))
+                    binding.searchBarGroup.visibility = View.GONE
+                    originMarker?.remove()
+                    binding.originDrag.visibility = View.VISIBLE
+                } else {
+                    binding.searchBarGroup.visibility = View.VISIBLE
+                    mMap.uiSettings.isZoomGesturesEnabled = true
+                    val newLocation = MapLocation()
+                    (activity as MainActivity?)?.showActionBar()
+                    newLocation.lat = originMarker?.position?.latitude
+                    newLocation.lng = originMarker?.position?.longitude
+                    newLocation.address = getAddress(LatLng(newLocation.lat!!, newLocation.lng!!))
+                    originEditText.setText(newLocation.address)
+                    binding.searchResultsContainer.visibility = View.GONE
+                    mainViewModel.updateOriginDestinationLatLng(newOrigin = newLocation)
+                }
+            }
+        }
+
+        mMap.setOnCameraMoveListener(this@MapFragment)
+        mMap.setOnCameraIdleListener(this@MapFragment)
     }
 
-
-    @SuppressLint("MissingPermission")
-    private fun trackLocation(){
-
-        Log.d("Map", "Tracking Location....")
-
-        val locationManager =  activity?.getSystemService(AppCompatActivity.LOCATION_SERVICE) as LocationManager
-
-        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, MIN_TIME_BTW_UPDATES.toLong(), MIN_DISTANCE_BTW_UPDATES, this)
-    }
 
     private fun checkPermission(permission: String, callback: (result: Boolean) -> Unit) {
         val request = ContextCompat.checkSelfPermission(
@@ -387,7 +445,7 @@ class MapFragment : Fragment(), OnMapReadyCallback, LocationListener {
             1 -> {
                 // If request is cancelled, the result arrays are empty.
                 if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    trackLocation()
+                    getCurrentLocation()
                 } else {
                     Toast.makeText(requireContext(), "Permission denied!", Toast.LENGTH_SHORT).show()
                 }
@@ -397,10 +455,9 @@ class MapFragment : Fragment(), OnMapReadyCallback, LocationListener {
 
     override fun onLocationChanged(location: Location?) {
         location?.let {
-            currentUserLatitude = it.latitude
-            currentUserLongitude = it.longitude
-            if(mainViewModel.originDestination.value?.origin == null) updateOriginLatLng(LatLng(currentUserLatitude, currentUserLongitude))
-            Log.d("Map", "changed: $currentUserLatitude $currentUserLongitude")
+            Log.d("Map", "Location changed!")
+            currentUserLocation = MapLocation(lat = location.latitude, lng = location.longitude)
+            if(mainViewModel.originDestination.value?.origin == null) updateOriginLatLng(MapLocation(lat = location.latitude, lng = location.longitude))
             val currentLocation = LatLng(it.latitude, it.longitude)
             originMarker?.remove()
             originMarker = mMap.addMarker(MarkerOptions().position(currentLocation).title("Current location").icon(BitmapDescriptorFactory.fromResource(R.drawable.origin_icon)))
@@ -409,15 +466,15 @@ class MapFragment : Fragment(), OnMapReadyCallback, LocationListener {
     }
 
     override fun onStatusChanged(p0: String?, p1: Int, p2: Bundle?) {
-        TODO("Not yet implemented")
+
     }
 
     override fun onProviderEnabled(p0: String?) {
-        TODO("Not yet implemented")
+
     }
 
     override fun onProviderDisabled(p0: String?) {
-        TODO("Not yet implemented")
+
     }
 
 
@@ -429,14 +486,14 @@ class MapFragment : Fragment(), OnMapReadyCallback, LocationListener {
                     originEditText.setText("Home")
                     originEditText.clearFocus()
                     mainViewModel.updateOriginDestinationLatLng(
-                        newOrigin = currentLoggedUser?.home?.let { home -> LatLng(home.lat!!, home.lng!! ) }
+                        newOrigin = currentUser.home
                     )
                 }
                 "Destination" -> {
                     destinationEditText.setText("Home")
                     destinationEditText.clearFocus()
                     mainViewModel.updateOriginDestinationLatLng(
-                        newDestination = currentLoggedUser?.home?.let { home -> LatLng(home.lat!!, home.lng!! ) }
+                        newDestination = currentUser.home
                     )
                 }
             }
@@ -453,16 +510,16 @@ class MapFragment : Fragment(), OnMapReadyCallback, LocationListener {
                 "Origin" -> {
                     originEditText.setText("Work")
                     originEditText.clearFocus()
-                    updateOriginLatLng(currentLoggedUser?.work?.let { work -> LatLng(work.lat!!, work.lng!! ) })
+                    updateOriginLatLng(currentUser.work)
                     mainViewModel.updateOriginDestinationLatLng(
-                        newOrigin = currentLoggedUser?.work?.let { work -> LatLng(work.lat!!, work.lng!! ) }
+                        newOrigin = currentUser.work
                     )
                 }
                 "Destination" -> {
                     destinationEditText.setText("Work")
                     destinationEditText.clearFocus()
                     mainViewModel.updateOriginDestinationLatLng(
-                        newDestination = currentLoggedUser?.work?.let { work -> LatLng(work.lat!!, work.lng!! ) }
+                        newDestination = currentUser.work
                     )
                 }
             }
@@ -473,17 +530,18 @@ class MapFragment : Fragment(), OnMapReadyCallback, LocationListener {
     }
 
     private fun currentLocationOnClick(binding: FragmentMapBinding){
+        getCurrentLocation()
         val listener = View.OnClickListener {
             when(CURRENT_EDIT_TEXT){
                 "Origin" -> {
                     originEditText.setText("Current Location")
                     originEditText.clearFocus()
-                    updateOriginLatLng(LatLng(currentUserLatitude, currentUserLongitude))
+                    updateOriginLatLng(currentUserLocation)
                 }
                 "Destination" -> {
                     destinationEditText.setText("Current Location")
                     destinationEditText.clearFocus()
-                    updateDestinationLatLng(LatLng(currentUserLatitude, currentUserLongitude))
+                    updateDestinationLatLng(currentUserLocation)
                 }
             }
         }
@@ -505,11 +563,11 @@ class MapFragment : Fragment(), OnMapReadyCallback, LocationListener {
         CURRENT_EDIT_TEXT = "Origin"
     }
 
-    private fun updateOriginLatLng(newOrigin: LatLng?){
+    private fun updateOriginLatLng(newOrigin: MapLocation?){
         mainViewModel.updateOriginDestinationLatLng( newOrigin = newOrigin)
     }
 
-    private fun updateDestinationLatLng(newDestination: LatLng?){
+    private fun updateDestinationLatLng(newDestination: MapLocation?){
         mainViewModel.updateOriginDestinationLatLng( newDestination = newDestination)
     }
 
@@ -603,7 +661,6 @@ class MapFragment : Fragment(), OnMapReadyCallback, LocationListener {
                 mainHandler!!.postDelayed(this, 2000)
             }
         })
-
     }
 
 
@@ -682,8 +739,100 @@ class MapFragment : Fragment(), OnMapReadyCallback, LocationListener {
         resetLayout(binding)
     }
 
+    override fun onResume() {
+        onStopFlag = false
+        currentUser.home?.let {
+            binding.homeGroup.visibility = View.VISIBLE
+            binding.home = it
+        } ?: run {
+            binding.homeGroup.visibility = View.GONE
+        }
+
+        currentUser.work?.let {
+            binding.workGroup.visibility = View.VISIBLE
+            binding.work = it
+        } ?: run {
+            binding.workGroup.visibility = View.GONE
+        }
+        super.onResume()
+    }
+
+    private fun getAddress(latLng: LatLng) : String{
+        Log.d("Map", "Getting address")
+        val geocoder = Geocoder(requireContext(), Locale.getDefault())
+        val addresses : List<Address>
+
+        try{
+            addresses = geocoder.getFromLocation(latLng.latitude, latLng.longitude, 1)
+            if(addresses.size == 1){
+                Log.d("Map", "Address ${addresses[0].getAddressLine(0)}")
+                return addresses[0].getAddressLine(0)
+            }
+        } catch (e: Exception){
+            Log.d("Map", "Error getting address: ${e.message}")
+        }
+        return ""
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun getCurrentLocation(){
+        val locationRequest = LocationRequest()
+
+        locationRequest.priority = LocationRequest.PRIORITY_HIGH_ACCURACY
 
 
+        LocationServices.getFusedLocationProviderClient(requireActivity())
+            .requestLocationUpdates(locationRequest, object : LocationCallback() {
+                override fun onLocationResult(locationResult: LocationResult?) {
+                    if(locationResult != null && locationResult.locations.isNotEmpty()){
+                        val newCurrentLocation = MapLocation()
+                        val latestIndex = locationResult.locations.size - 1
+                        newCurrentLocation.lat = locationResult.locations[latestIndex].latitude
+                        newCurrentLocation.lng = locationResult.locations[latestIndex].longitude
+                        newCurrentLocation.address = getAddress(LatLng(newCurrentLocation.lat!!, newCurrentLocation.lng!!))
 
+                        if(mainViewModel.originDestination.value?.origin == null) {
+                            updateOriginLatLng(MapLocation(lat = newCurrentLocation.lat, lng = newCurrentLocation.lng, address = newCurrentLocation.address))
+                        }
+
+                        originMarker?.remove()
+                        val latLng = LatLng(locationResult.locations[latestIndex].latitude, locationResult.locations[latestIndex].longitude)
+                        originMarker = mMap.addMarker(MarkerOptions().position(latLng).title("Current location").icon(BitmapDescriptorFactory.fromResource(R.drawable.origin_icon)))
+                        mMap.animateCamera(CameraUpdateFactory.newLatLng(latLng))
+                        Log.d("Map","Getting current location: $latLng")
+
+                        currentUserLocation = newCurrentLocation
+                    }
+                    super.onLocationResult(locationResult)
+                }
+
+                override fun onLocationAvailability(locationAvailability: LocationAvailability?) {
+                    super.onLocationAvailability(locationAvailability)
+                }
+            }, Looper.getMainLooper())
+    }
+
+    override fun onCameraMove() {
+        if(dragMarkerFlag){
+            Log.d("Map","Camera moving....")
+            originMarker?.remove()
+            // display imageView
+            binding.originDrag?.visibility = View.VISIBLE
+        }
+
+    }
+
+    override fun onCameraIdle() {
+        if(dragMarkerFlag){
+            // hiding imageView
+            binding.originDrag.visibility = View.GONE
+            // customizing map marker with a custom icon
+            // and place it on the current map camera position
+            val markerOptions = MarkerOptions().position(mMap.cameraPosition.target)
+                .icon(BitmapDescriptorFactory.fromResource(R.drawable.origin_icon))
+            originMarker = mMap.addMarker(markerOptions)
+        }
+
+    }
 
 }

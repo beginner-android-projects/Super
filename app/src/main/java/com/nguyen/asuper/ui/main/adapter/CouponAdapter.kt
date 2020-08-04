@@ -15,6 +15,7 @@ class CouponAdapter(private val coupons: List<Coupon>,
     inner class CouponViewHolder(private val binding: ItemCouponBinding): RecyclerView.ViewHolder(binding.root){
         fun bind(coupon: Coupon){
             binding.coupon = coupon
+            binding.discount = coupon.discount
             binding.executePendingBindings()
             binding.couponContainer.setOnClickListener {
                 coupon.code?.let {

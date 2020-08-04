@@ -33,7 +33,7 @@ class DriverTripSummaryDialogFragment(private val mainViewModel: MainViewModel):
             }
 
 
-            binding.tripPreview.setImageBitmap(mainViewModel.trip.value?.preview)
+            binding.tripPreview.setImageBitmap(mainViewModel.currentTripPreviewBitmap.value)
 
             builder.setView(binding.root)
                 .setCancelable(true)

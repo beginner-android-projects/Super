@@ -1,6 +1,6 @@
 package com.nguyen.asuper.data
 
-data class Location(
+data class MapLocation(
     var id: String? = null,
     var name: String? = null,
     var address: String? = null,

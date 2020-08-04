@@ -15,6 +15,10 @@
             name="cancelable"
             type="Boolean" />
 
+        <variable
+            name="rating"
+            type="Double" />
+
 
     </data>
 
@@ -78,7 +82,7 @@
             android:scaleX="0.6"
             android:scaleY="0.6"
             android:isIndicator="true"
-            android:rating="@{driver.rating.floatValue()}"
+            android:rating="@{rating.floatValue()}"
             app:layout_constraintStart_toEndOf="@+id/user_avatar_post"
             app:layout_constraintTop_toBottomOf="@+id/textView11" />
 

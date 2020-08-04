@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import com.google.android.libraries.places.api.model.AutocompletePrediction
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import com.nguyen.asuper.data.MapLocation
 import com.nguyen.asuper.data.SearchHistory
 import com.nguyen.asuper.data.User
 import java.lang.reflect.Type
@@ -16,9 +17,8 @@ object SavedSharedPreferences {
     lateinit var mGson : Gson
 
     //SharedPreferences variables
-    private const val CURRENT_LOGGED_USER = "current_logged_user"
-    private const val CURRENT_LOGGED_USER_LAT = "current_logged_user_latitude"
-    private const val CURRENT_LOGGED_USER_LNG = "current_logged_user_longitude"
+    private const val CURRENT_USER_LOCATION = "current_user_location"
+    private const val CURRENT_LOGGED_USER_ID = "current_logged_user_id"
     private const val SEARCH_HISTORY = "search_history"
 
 
@@ -34,33 +34,24 @@ object SavedSharedPreferences {
         editor.apply()
     }
 
+    var currentLoggedUserId: String?
+        get() = preferences.getString(CURRENT_LOGGED_USER_ID, null)
+        set(value){
+            preferences.edit{
+                it.putString(CURRENT_LOGGED_USER_ID, value)
+            }
+        }
 
-    var currentLoggedUser: User?
+    var currentUserLocation: MapLocation?
         get() {
-            val json = preferences.getString(CURRENT_LOGGED_USER, "")
+            val json = preferences.getString(CURRENT_USER_LOCATION, "")
             if (json === "") return null
-            return mGson.fromJson(json, User::class.java)
+            return mGson.fromJson(json, MapLocation::class.java)
         }
         set(value) {
             val json = mGson.toJson(value)
             preferences.edit {
-                it.putString(CURRENT_LOGGED_USER, json)
-            }
-        }
-
-    var currentUserLatitude: Double
-        get() = preferences.getFloat(CURRENT_LOGGED_USER_LAT, 0.0F).toDouble()
-        set(value){
-            preferences.edit {
-                it.putFloat(CURRENT_LOGGED_USER_LAT, value.toFloat())
-            }
-        }
-
-    var currentUserLongitude: Double
-        get() = preferences.getFloat(CURRENT_LOGGED_USER_LNG, 0.0F).toDouble()
-        set(value){
-            preferences.edit {
-                it.putFloat(CURRENT_LOGGED_USER_LNG, value.toFloat())
+                it.putString(CURRENT_USER_LOCATION, json)
             }
         }
 

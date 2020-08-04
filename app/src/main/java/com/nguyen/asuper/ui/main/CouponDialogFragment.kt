@@ -13,6 +13,7 @@ import androidx.lifecycle.Observer
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.nguyen.asuper.R
+import com.nguyen.asuper.data.Coupon
 import com.nguyen.asuper.ui.main.adapter.CouponAdapter
 import com.nguyen.asuper.viewmodels.MainViewModel
 import kotlinx.android.synthetic.main.fragment_coupon.view.*
@@ -35,6 +36,7 @@ class CouponDialogFragment(private val mainViewModel: MainViewModel): DialogFrag
             Log.d("Coupon", "Coupons: ${it.size}")
             loadingIcon.visibility = View.GONE
             recyclerView.adapter = CouponAdapter(it, mainViewModel, fun(){
+                (it as ArrayList<Coupon>).clear()
                 dismiss()
             })
         })

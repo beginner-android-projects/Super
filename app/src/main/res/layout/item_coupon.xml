@@ -7,6 +7,11 @@
             name="coupon"
             type="com.nguyen.asuper.data.Coupon" />
 
+        <variable
+            name="discount"
+            type="Long" />
+
+
     </data>
 
     <LinearLayout
@@ -64,7 +69,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
-                    android:text="@{coupon.discount.toString() + `% off`}"
+                    android:text="@{discount.toString() + `% off`}"
                     android:paddingEnd="20dp"
                     android:background="@color/red"
                     android:padding="2dp"

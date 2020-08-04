@@ -10,7 +10,9 @@ import androidx.lifecycle.Observer
 import androidx.navigation.fragment.findNavController
 import com.nguyen.asuper.R
 import com.nguyen.asuper.databinding.FragmentLoginBinding
+import com.nguyen.asuper.repository.AuthRepository.Companion.currentUser
 import com.nguyen.asuper.ui.MainActivity
+import com.nguyen.asuper.util.SavedSharedPreferences.currentLoggedUserId
 import com.nguyen.asuper.viewmodels.AuthViewModel
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
@@ -31,6 +33,8 @@ class LoginFragment : Fragment() {
             binding.isError = it.not()
             if(it){
                 startActivity(Intent(requireContext(), MainActivity::class.java))
+                activity?.finish()
+                currentLoggedUserId = currentUser.id
             }
         })
 

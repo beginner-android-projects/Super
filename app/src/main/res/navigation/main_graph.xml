@@ -8,7 +8,7 @@
     <fragment
         android:id="@+id/map_view"
         android:name="com.nguyen.asuper.ui.main.MapFragment"
-        android:label="map"
+        android:label="Super"
         tools:layout="@layout/fragment_map"/>
 
     <fragment
@@ -16,5 +16,11 @@
         android:name="com.nguyen.asuper.ui.main.CouponFragment"
         android:label="coupon"
         tools:layout="@layout/fragment_coupon"/>
+
+    <fragment
+        android:id="@+id/trip_history_fragment"
+        android:name="com.nguyen.asuper.ui.main.TripHistoryFragment"
+        android:label="Trip History"
+        tools:layout="@layout/fragment_trip_history"/>
 
 </navigation>

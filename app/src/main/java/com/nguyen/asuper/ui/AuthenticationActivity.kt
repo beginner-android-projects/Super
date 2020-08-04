@@ -4,20 +4,32 @@ import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.Observer
 import com.nguyen.asuper.R
-import com.nguyen.asuper.ui.auth.RegisterFragment.Companion.PICK_IMAGE_REQUEST
-import com.nguyen.asuper.util.SavedSharedPreferences.currentLoggedUser
+import com.nguyen.asuper.util.SavedSharedPreferences.currentLoggedUserId
+import com.nguyen.asuper.viewmodels.AuthViewModel
+import org.koin.androidx.viewmodel.ext.android.viewModel
 
 
 class AuthenticationActivity : AppCompatActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
+    private val authViewModel by viewModel<AuthViewModel>()
 
+    override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        if(currentLoggedUser != null){
-            startActivity(Intent(this, MainActivity::class.java))
+        Log.d("Debug", "test: $currentLoggedUserId")
+        if(currentLoggedUserId != null){
+            authViewModel.getUser(currentLoggedUserId!!)
+            authViewModel.loginStatus.observe(this, Observer {
+                if(it){
+                    startActivity(Intent(this, MainActivity::class.java))
+                    finish()
+                }
+            })
+
         } else {
             setContentView(R.layout.activity_authentication)
         }
+
     }
 
 }

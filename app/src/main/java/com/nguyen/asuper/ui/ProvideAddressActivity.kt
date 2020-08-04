@@ -12,7 +12,7 @@ import com.google.android.libraries.places.widget.Autocomplete
 import com.google.android.libraries.places.widget.AutocompleteActivity
 import com.google.android.libraries.places.widget.model.AutocompleteActivityMode
 import com.nguyen.asuper.R
-import com.nguyen.asuper.data.Location
+import com.nguyen.asuper.data.MapLocation
 import com.nguyen.asuper.viewmodels.AuthViewModel
 import kotlinx.android.synthetic.main.activity_provide_address.*
 import org.koin.androidx.viewmodel.ext.android.viewModel
@@ -25,8 +25,8 @@ class ProvideAddressActivity : AppCompatActivity() {
 
     }
 
-    private var home: Location? = null
-    private var work: Location? = null
+    private var home: MapLocation? = null
+    private var work: MapLocation? = null
 
     private val authViewModel by viewModel<AuthViewModel>()
 
@@ -56,6 +56,7 @@ class ProvideAddressActivity : AppCompatActivity() {
                 loading_icon_address.visibility = View.VISIBLE
                 authViewModel.saveHomeAndWorkLocation(home, work, fun(result: Boolean){
                     loading_icon_address.visibility = View.GONE
+                    finish()
                     if(!result){
                         Toast.makeText(this, "Cannot save location!",Toast.LENGTH_SHORT).show()
                     }
@@ -63,7 +64,7 @@ class ProvideAddressActivity : AppCompatActivity() {
             } else {
                 Toast.makeText(this, "Nothing changed!",Toast.LENGTH_SHORT).show()
             }
-            finish()
+
         }
 
 
@@ -90,11 +91,11 @@ class ProvideAddressActivity : AppCompatActivity() {
                     Log.d("Address", "$place")
                     if(requestCode == AUTOCOMPLETE_HOME_REQUEST_CODE){
                         home_address_button.text = place.address
-                        home = Location(place.id, place.name, place.address, place.latLng?.latitude, place.latLng?.longitude)
+                        home = MapLocation(place.id!!, place.name, place.address, place.latLng?.latitude, place.latLng?.longitude)
                     }
                     else {
                         work_address_button.text = place.address
-                        work = Location(place.id, place.name, place.address, place.latLng?.latitude, place.latLng?.longitude)
+                        work = MapLocation(place.id!!, place.name, place.address, place.latLng?.latitude, place.latLng?.longitude)
                     }
 
                 }

@@ -3,7 +3,6 @@
     package="com.nguyen.asuper">
 
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
-
     <application
         android:name=".MainApplication"
         android:allowBackup="true"
@@ -13,7 +12,7 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
         <activity android:name=".ui.ProvideAddressActivity"></activity>
-        <activity android:name=".ui.MainActivity" android:theme="@style/MapTheme" android:windowSoftInputMode="adjustNothing"/>
+        <activity android:name=".ui.MainActivity" android:windowSoftInputMode="adjustNothing" android:screenOrientation="portrait"/>
         <activity android:name=".ui.AuthenticationActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

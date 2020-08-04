@@ -6,5 +6,6 @@ data class Coupon (
     var code: String? = null,
     var description: String? = null,
     var discount: Long? = null,
-    var backgroundImg: String? = null
+    var backgroundImg: String? = null,
+    var userUsed: HashMap<String, Boolean>? = null
 )

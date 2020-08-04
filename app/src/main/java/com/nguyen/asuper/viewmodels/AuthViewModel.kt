@@ -7,8 +7,9 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Transformations
 import androidx.lifecycle.ViewModel
 import com.nguyen.asuper.data.ApiResponse
-import com.nguyen.asuper.data.Location
+import com.nguyen.asuper.data.MapLocation
 import com.nguyen.asuper.repository.AuthRepository
+import com.nguyen.asuper.repository.AuthRepository.Companion.currentUser
 
 class AuthViewModel(private val repository: AuthRepository) : ViewModel(){
 
@@ -58,7 +59,13 @@ class AuthViewModel(private val repository: AuthRepository) : ViewModel(){
         })
     }
 
-    fun saveHomeAndWorkLocation(home: Location?, work: Location?, callback: (Boolean) -> Unit) {
+    fun getUser(userId: String){
+        repository.getUser(userId){
+            currentUser = it
+            loginResponse.value = ApiResponse(status = true)
+        }
+    }
+    fun saveHomeAndWorkLocation(home: MapLocation?, work: MapLocation?, callback: (Boolean) -> Unit) {
         repository.saveUserLocation(home, work, callback)
     }
 

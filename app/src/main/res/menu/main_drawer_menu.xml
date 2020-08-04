@@ -1,9 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <group android:checkableBehavior="single">
-        <item android:title="Item 1" android:id="@+id/item1"/>
-        <item android:title="Item 2" android:id="@+id/item2"/>
-        <item android:title="Item 3" android:id="@+id/item3"/>
+        <item
+            android:title="Trip history"
+            android:id="@id/trip_history_fragment"
+            android:icon="@drawable/trip_history_icon_32"/>
+        <item
+            android:title="Log out"
+            android:id="@+id/log_out_item"
+            android:icon="@drawable/logout_icon_32"/>
 
     </group>
 

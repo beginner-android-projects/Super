@@ -12,10 +12,7 @@ import com.google.android.libraries.places.api.model.AutocompletePrediction
 import com.google.android.libraries.places.api.model.Place
 import com.google.android.libraries.places.api.net.PlacesClient
 import com.nguyen.asuper.R
-import com.nguyen.asuper.data.ApiResponse
-import com.nguyen.asuper.data.Coupon
-import com.nguyen.asuper.data.OriginDestination
-import com.nguyen.asuper.data.Trip
+import com.nguyen.asuper.data.*
 import com.nguyen.asuper.repository.MainRepository
 import java.util.concurrent.TimeUnit
 
@@ -27,7 +24,7 @@ class MainViewModel(private val repository: MainRepository) : ViewModel(){
     private val driverDirectionResponse: MutableLiveData<ApiResponse<Direction>> = MutableLiveData()
     private val couponListResponse: MutableLiveData<ApiResponse<List<Coupon>>> = MutableLiveData()
     private val submitRatingResponse: MutableLiveData<ApiResponse<Unit>> = MutableLiveData()
-
+    private val tripHistoryResponse: MutableLiveData<ApiResponse<List<Trip>>> = MutableLiveData()
 
     val originDestination: MutableLiveData<OriginDestination> = MutableLiveData(OriginDestination())
     val autoSuggestionsList: LiveData<List<AutocompletePrediction>> = Transformations.map(autoSuggestionsResponse){
@@ -87,6 +84,12 @@ class MainViewModel(private val repository: MainRepository) : ViewModel(){
         it.status
     }
 
+    val tripsList : LiveData<List<Trip>> = Transformations.map(tripHistoryResponse){
+        it.data
+    }
+
+    val currentTripPreviewBitmap: MutableLiveData<Bitmap> = MutableLiveData()
+
     fun getAutoCompleteSuggestion(query: String, placesClient: PlacesClient){
         repository.getAutocompleteSuggestions(query, placesClient, fun(response: ApiResponse<List<AutocompletePrediction>>){
             autoSuggestionsResponse.value = response
@@ -95,10 +98,10 @@ class MainViewModel(private val repository: MainRepository) : ViewModel(){
 
     fun getOriginLatLng(placeId: String, placesClient: PlacesClient){
         repository.getPlaceLatLng(placeId, placesClient, fun(response: ApiResponse<Place>){
-            response.status?.let{
-                if(it) {
-                    Log.d("Map", "Before getting direction")
-                    val temp = OriginDestination(response.data?.latLng, originDestination.value?.destination)
+            if(response.status) {
+                response.data?.let {
+                    val origin = MapLocation(it.id, it.name, it.address, it.latLng?.latitude, it.latLng?.longitude)
+                    val temp = OriginDestination(origin, originDestination.value?.destination)
                     originDestination.value = temp
                 }
             }
@@ -107,10 +110,10 @@ class MainViewModel(private val repository: MainRepository) : ViewModel(){
 
     fun getDestinationLatLng(placeId: String, placesClient: PlacesClient){
         repository.getPlaceLatLng(placeId, placesClient, fun(response: ApiResponse<Place>){
-            response.status?.let{
-                if(it) {
-                    Log.d("Map", "Before getting direction")
-                    val temp = OriginDestination(originDestination.value?.origin, response.data?.latLng)
+            if(response.status){
+                response.data?.let {
+                    val destination = MapLocation(it.id, it.name, it.address, it.latLng?.latitude, it.latLng?.longitude)
+                    val temp = OriginDestination(originDestination.value?.origin, destination)
                     originDestination.value = temp
                 }
             }
@@ -127,7 +130,7 @@ class MainViewModel(private val repository: MainRepository) : ViewModel(){
         })
     }
 
-    fun updateOriginDestinationLatLng(newOrigin: LatLng? = originDestination.value?.origin, newDestination: LatLng? = originDestination.value?.destination){
+    fun updateOriginDestinationLatLng(newOrigin: MapLocation? = originDestination.value?.origin, newDestination: MapLocation? = originDestination.value?.destination){
         val temp = OriginDestination(newOrigin, newDestination)
         originDestination.value = temp
     }
@@ -137,25 +140,29 @@ class MainViewModel(private val repository: MainRepository) : ViewModel(){
             "taxi" -> {
                 carType.value = "Taxi"
                 carSize.value = 4
-                fareEstimated.value = (minutesDuration.value)?.toDouble()
+                val duration = if(minutesDuration.value != null) minutesDuration.value else 0
+                fareEstimated.value = duration?.toDouble()
                 carIconResource.value = R.drawable.taxi_car_icon
             }
             "superx" -> {
                 carType.value = "SuperX"
                 carSize.value = 4
-                fareEstimated.value = (minutesDuration.value?.times(2))?.toDouble()
+                val duration = if(minutesDuration.value != null) minutesDuration.value else 0
+                fareEstimated.value = (duration?.times(2))?.toDouble()
                 carIconResource.value = R.drawable.superx_car_icon
             }
             "black" -> {
                 carType.value = "Black"
                 carSize.value = 6
-                fareEstimated.value = (minutesDuration.value?.times(4))?.toDouble()
+                val duration = if(minutesDuration.value != null) minutesDuration.value else 0
+                fareEstimated.value = (duration?.times(4))?.toDouble()
                 carIconResource.value = R.drawable.black_car_icon
             }
             "suv" -> {
                 carType.value = "SUV"
                 carSize.value = 8
-                fareEstimated.value = (minutesDuration.value?.times(6))?.toDouble()
+                val duration = if(minutesDuration.value != null) minutesDuration.value else 0
+                fareEstimated.value = (duration?.times(6))?.toDouble()
                 carIconResource.value = R.drawable.suv_car_icon
             }
         }
@@ -172,26 +179,23 @@ class MainViewModel(private val repository: MainRepository) : ViewModel(){
             carType = carType.value!!,
             coupon = currentCoupon.value,
             callback = fun(response: ApiResponse<Trip>){
-                if(response.status!!) {
-                    Log.d("Trip", "Trip: ${response.data}")
+                if(response.status) {
                     requestRideResponse.value = response
-                }
-                else errorMsg.value = response.message
+                    currentCoupon.value = null
+                } else errorMsg.value = response.message
             }
         )
     }
 
-
-
-
     fun getDriverDirection(){
         driverLatLng.value?.let{
-            repository.getDirection(it, originDestination.value?.origin!!, fun(response: ApiResponse<Direction>){
-                Log.d("Map", "Direction response: $response")
-                response.status?.let {status ->
-                    if(status) driverDirectionResponse.value = response
-                }
-            })
+            originDestination.value?.origin?.let {origin ->
+                repository.getDirection(it, LatLng(origin.lat!!, origin.lng!!), fun(response: ApiResponse<Direction>){
+                    Log.d("Map", "Direction response: $response")
+                    if(response.status) driverDirectionResponse.value = response
+                })
+            }
+
         }
     }
 
@@ -225,15 +229,18 @@ class MainViewModel(private val repository: MainRepository) : ViewModel(){
     }
 
     fun saveTripPreviewBitmap(preview: Bitmap){
-        repository.saveTripPreviewBitmap(preview)
+        currentTripPreviewBitmap.value = preview
     }
 
     fun saveTrip(){
-        repository.saveTripToDatabase(trip.value) {
-            if(!it.status!!){
-                errorMsg.value = it.message
+        trip.value?.let {trip ->
+            repository.saveTripToDatabase(trip, currentTripPreviewBitmap.value) {
+                if(!it.status){
+                    errorMsg.value = it.message
+                }
             }
         }
+
     }
 
     fun submitRating(rating: Double){
@@ -247,5 +254,33 @@ class MainViewModel(private val repository: MainRepository) : ViewModel(){
         }
 
     }
+
+    fun getTripHistory(){
+        repository.getTripHistory {
+            tripHistoryResponse.value = it
+        }
+    }
+
+
+//    fun reset() {
+//        autoSuggestionsResponse.value = null
+//        directionResponse.value = null
+//        requestRideResponse.value = null
+//        driverDirectionResponse.value = null
+//        couponListResponse.value = null
+//        submitRatingResponse.value = null
+//        tripHistoryResponse.value = null
+//        originDestination.value = null
+//        errorMsg.value = null
+//        minutesDuration.value = null
+//        fareEstimated.value = null
+//        carSize.value = null
+//        carType.value = null
+//        carIconResource.value = null
+//        paymentMethod.value = null
+//        fareCouponApplied.value = null
+//        currentCoupon.value = null
+//    }
+
 }
 

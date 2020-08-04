@@ -2,15 +2,19 @@ package com.nguyen.asuper.repository
 
 import android.net.Uri
 import android.util.Log
-import com.nguyen.asuper.data.*
+import com.nguyen.asuper.data.ApiResponse
+import com.nguyen.asuper.data.MapLocation
+import com.nguyen.asuper.data.OriginDestination
+import com.nguyen.asuper.data.User
 import com.nguyen.asuper.util.FirebaseUtil
 import com.nguyen.asuper.util.SavedSharedPreferences
-import com.nguyen.asuper.util.SavedSharedPreferences.currentLoggedUser
 import com.nguyen.asuper.util.SavedSharedPreferences.mGson
-import java.io.ByteArrayOutputStream
-import java.net.URI
 
 class AuthRepository{
+
+    companion object {
+        lateinit var currentUser: User
+    }
 
 
     fun registerUser(avatar: Uri?, username: String, email: String, password: String, confirmPassword: String, callback: (ApiResponse<Unit>) -> Unit){
@@ -33,15 +37,15 @@ class AuthRepository{
 
                         if(avatar != null){
                             uploadAvatar(user.uid, avatar, fun(uriString: String){
-                                currentLoggedUser = User(user.uid, username, email, avatar = uriString)
-                                insertOrUpdateUser(fun(result: Boolean){
+                                val user = User(user.uid, username, email, avatar = uriString)
+                                insertOrUpdateUserInFireStore(user, fun(result: Boolean){
                                     if (result) callback.invoke(ApiResponse(200, "Update Successfully!", true))
                                     else callback.invoke(ApiResponse(null, "Cannot update at the moment!", false))
                                 })
                             })
                         } else {
-                            currentLoggedUser = User(user.uid, username, email)
-                            insertOrUpdateUser(fun(result: Boolean){
+                            val user = User(user.uid, username, email)
+                            insertOrUpdateUserInFireStore(user, fun(result: Boolean){
                                 if (result) callback.invoke(ApiResponse(200, "Register Successfully!", true))
                                 else callback.invoke(ApiResponse(null, "Cannot register at the moment!", false))
                             })
@@ -73,7 +77,7 @@ class AuthRepository{
 
                     user?.uid?.let {
                         getUser(it, fun(user: User){
-                            currentLoggedUser = user
+                            currentUser = user
                             callback.invoke(ApiResponse(200, "Login Successfully!", true))
                         })
                     }
@@ -113,56 +117,78 @@ class AuthRepository{
             }
     }
 
-    fun saveUserLocation(home: Location?, work: Location?, callback: (Boolean) -> Unit){
-        val user = currentLoggedUser?.copy(home = home, work = work)
-        currentLoggedUser = user
-        insertOrUpdateUser(callback)
+    fun saveUserLocation(home: MapLocation?, work: MapLocation?, callback: (Boolean) -> Unit){
+        val user = currentUser.copy(home = home, work = work)
+        insertOrUpdateUserInFireStore(user, callback)
     }
 
-    private fun insertOrUpdateUser(callback: (Boolean) -> Unit){
-        currentLoggedUser?.let {
-            val home = mGson.toJson(it.home)
-            val work = mGson.toJson(it.work)
-            Log.d("FireStore", "$home and $work")
-            val user = hashMapOf(
-                "user_id" to it.id,
-                "username" to it.username,
-                "home" to home,
-                "work" to work,
-                "avatar" to it.avatar,
-                "used_coupons" to it.usedCoupons,
-                "trips" to it.trips
-            )
+    private fun insertOrUpdateUserInFireStore(newUser: User, callback: (Boolean) -> Unit){
+        val user = hashMapOf(
+            "user_id" to newUser.id,
+            "username" to newUser.username,
+            "email" to newUser.email,
+            "home" to newUser.home,
+            "work" to newUser.work,
+            "avatar" to newUser.avatar
+        )
+        FirebaseUtil.getDb().collection("users").document(newUser.id!!)
+            .set(user)
+            .addOnSuccessListener {
+                Log.d("FireStore", "Add/Update user successfully")
+                currentUser = newUser
+                callback.invoke(true)
+            }
+            .addOnFailureListener { e ->
+                Log.d("FireStore", "Fail to add/update user", e)
+                callback.invoke(false)
+            }
+    }
+
+    fun updateUserLocally() {
+        currentUser.let {
             FirebaseUtil.getDb().collection("users").document(it.id!!)
-                .set(user)
-                .addOnSuccessListener {
-                    Log.d("FireStore", "Add/Update user successfully")
-                    callback.invoke(true)
+                .get()
+                .addOnSuccessListener { document ->
+                    if (document != null) {
+                        Log.d("FireStore", "Getting user successfully: ${document.data}")
+                        val homeMap = document.data?.get("home") as HashMap<String, Object>
+                        val workMap = document.data?.get("work") as HashMap<String, Object>
+                        val home = MapLocation(homeMap["id"].toString(), homeMap["name"].toString(), homeMap["address"].toString(), homeMap["lat"] as Double, homeMap["lng"] as Double)
+                        val work = MapLocation(workMap["id"].toString(), workMap["name"].toString(), workMap["address"].toString(), workMap["lat"] as Double, workMap["lng"] as Double)
+                        val user = User(
+                            document.data?.get("user_id") as String?,
+                            document.data?.get("username") as String?,
+                            document.data?.get("email") as String?,
+                            home,
+                            work,
+                            document.data?.get("avatar") as String?
+                        )
+                        currentUser = user
+                    } else {
+                        Log.d("FireStore", "Not found user")
+                    }
                 }
-                .addOnFailureListener { e ->
-                    Log.d("FireStore", "Fail to add/update user", e)
-                    callback.invoke(false)
+                .addOnFailureListener { exception ->
+                    Log.d("FireStore", "get failed with ${exception.message}")
                 }
         }
+
     }
 
-    private fun getUser(id: String, callback: (user: User) -> Unit) {
+    fun getUser(id: String, callback: (user: User) -> Unit) {
         FirebaseUtil.getDb().collection("users").document(id)
             .get()
             .addOnSuccessListener { document ->
                 if (document != null) {
-                    Log.d("FireStore", "Getting user successfully: ${document.data}")
-                    val home = mGson.fromJson(document.data?.get("home") as String?, Location::class.java)
-                    val work = mGson.fromJson(document.data?.get("work") as String?, Location::class.java)
                     val user = User(
                         document.data?.get("user_id") as String?,
                         document.data?.get("username") as String?,
                         document.data?.get("email") as String?,
-                        home,
-                        work,
-                        document.data?.get("avatar") as String?,
-                        document.data?.get("used_coupon") as HashMap<String, Boolean>?
+                        mGson.fromJson(mGson.toJsonTree(document.data?.get("home")), MapLocation::class.java),
+                        mGson.fromJson(mGson.toJsonTree(document.data?.get("work")), MapLocation::class.java),
+                        document.data?.get("avatar") as String?
                     )
+                    Log.d("FireStore", "user: $user")
                     callback.invoke(user)
                 } else {
                     Log.d("FireStore", "Not found user")
@@ -172,6 +198,8 @@ class AuthRepository{
                 Log.d("FireStore", "get failed with ", exception)
             }
     }
+
+
 
     private fun uploadAvatar(userId: String, uri: Uri, callback: (uri: String) -> Unit){
         val avatarFolder = FirebaseUtil.getStorageRef().child("avatars/${userId}")
