@@ -19,7 +19,6 @@ object SavedSharedPreferences {
     //SharedPreferences variables
     private const val CURRENT_USER_LOCATION = "current_user_location"
     private const val CURRENT_LOGGED_USER_ID = "current_logged_user_id"
-    private const val SEARCH_HISTORY = "search_history"
 
 
     fun init(context: Context) {
@@ -57,7 +56,7 @@ object SavedSharedPreferences {
 
     var searchHistories: List<SearchHistory>
         get() {
-            val json = preferences.getString(SEARCH_HISTORY, "")
+            val json = preferences.getString(currentLoggedUserId, "")
             if (json === "") return emptyList()
             val type: Type = object : TypeToken<List<SearchHistory>>() {}.type
             return mGson.fromJson(json, type)
@@ -65,7 +64,7 @@ object SavedSharedPreferences {
         set(value) {
             val json = mGson.toJson(value)
             preferences.edit {
-                it.putString(SEARCH_HISTORY, json)
+                it.putString(currentLoggedUserId, json)
             }
         }
 

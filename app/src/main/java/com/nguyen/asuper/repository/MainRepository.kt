@@ -1,6 +1,7 @@
 package com.nguyen.asuper.repository
 
 import android.graphics.Bitmap
+import android.net.Uri
 import android.util.Log
 import com.akexorcist.googledirection.DirectionCallback
 import com.akexorcist.googledirection.GoogleDirection
@@ -397,6 +398,67 @@ class MainRepository{
                     // Handle failures
                     Log.d("FireStore", "Fail to complete loading trip preview")
                 }
+            }
+    }
+
+    fun uploadAvatar(userId: String, uri: Uri, callback: (uri: String) -> Unit) {
+        val avatarFolder = FirebaseUtil.getStorageRef().child("avatars/${userId}")
+        val uploadTask = avatarFolder.putFile(uri)
+
+        uploadTask
+            .addOnSuccessListener {
+                Log.d("FireStore", "Upload success: ${it.storage}")
+            }
+            .addOnFailureListener {
+                Log.d("FireStore", "Fail: ${it.message}")
+            }
+            .continueWithTask { task ->
+                if (!task.isSuccessful) {
+                    task.exception?.let {
+                        throw it
+                    }
+                }
+                avatarFolder.downloadUrl
+            }
+            .addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    val downloadUri = task.result
+                    Log.d("FireStore", "Uri: ${downloadUri.toString()}")
+                    downloadUri?.let {
+                        callback.invoke(it.toString())
+                    }
+
+                } else {
+                    // Handle failures
+                    Log.d("FireStore", "Fail to complete loading avatar!")
+                }
+            }
+    }
+
+    fun updateUser(username: String? = null, avatar: String? = null, callback: (ApiResponse<Unit>) -> Unit){
+        val newUser = currentUser.copy(
+            username = username ?: currentUser.username,
+            avatar = avatar ?: currentUser.avatar
+        )
+
+        val userMap = hashMapOf(
+            "user_id" to newUser.id,
+            "username" to newUser.username,
+            "email" to newUser.email,
+            "home" to newUser.home,
+            "work" to newUser.work,
+            "avatar" to newUser.avatar
+        )
+        FirebaseUtil.getDb().collection("users").document(newUser.id!!)
+            .set(userMap)
+            .addOnSuccessListener {
+                Log.d("FireStore", "Add/Update user successfully")
+                currentUser = newUser
+                callback.invoke(ApiResponse(null, "Update user successfully!", true))
+            }
+            .addOnFailureListener { e ->
+                Log.d("FireStore", "Fail to add/update user", e)
+                callback.invoke(ApiResponse(null, "Fail: ${e.message}", false))
             }
     }
 }

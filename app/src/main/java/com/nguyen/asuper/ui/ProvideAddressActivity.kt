@@ -38,6 +38,17 @@ class ProvideAddressActivity : AppCompatActivity() {
         // return after the user has made a selection.
         val fields = listOf(Place.Field.ID, Place.Field.NAME, Place.Field.ADDRESS, Place.Field.LAT_LNG)
 
+        val homeAddress = intent.extras?.getString("home")
+        val workAddress = intent.extras?.getString("work")
+
+        homeAddress?.let {
+            home_address_button.text = homeAddress
+        }
+
+        workAddress?.let {
+            work_address_button.text = workAddress
+        }
+
         // Start the autocomplete intent.
         home_address_button.setOnClickListener {
             val intent = Autocomplete.IntentBuilder(AutocompleteActivityMode.FULLSCREEN, fields)

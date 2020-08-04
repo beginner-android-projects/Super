@@ -5,6 +5,12 @@
             android:title="Trip history"
             android:id="@id/trip_history_fragment"
             android:icon="@drawable/trip_history_icon_32"/>
+
+        <item
+            android:title="Home and Work address"
+            android:id="@+id/home_and_work_item"
+            android:icon="@drawable/location_icon_32"/>
+
         <item
             android:title="Log out"
             android:id="@+id/log_out_item"

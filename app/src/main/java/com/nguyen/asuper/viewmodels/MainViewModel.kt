@@ -1,6 +1,7 @@
 package com.nguyen.asuper.viewmodels
 
 import android.graphics.Bitmap
+import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -258,6 +259,28 @@ class MainViewModel(private val repository: MainRepository) : ViewModel(){
     fun getTripHistory(){
         repository.getTripHistory {
             tripHistoryResponse.value = it
+        }
+    }
+
+    fun saveAvatar(userId: String?, uri: Uri?){
+        if(userId == null || uri == null){
+            errorMsg.value = "Can't save avatar! Try again!"
+            return
+        }
+        repository.uploadAvatar(userId, uri){
+            repository.updateUser(avatar = it) {response ->
+                if(!response.status){
+                    errorMsg.value = response.message
+                }
+            }
+        }
+    }
+
+    fun saveUserName(id: String?, newName: String) {
+        repository.updateUser(username = newName) {response ->
+            if(!response.status){
+                errorMsg.value = response.message
+            }
         }
     }
 

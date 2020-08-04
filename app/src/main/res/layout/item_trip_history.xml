@@ -202,7 +202,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
             android:fontFamily="@font/montserrat"
-            android:text="@{`Used Coupon: ` + (trip.couponUsed.code == null ? `none` : trip.couponUsed.code == null)}"
+            android:text="@{`Used Coupon: ` + (trip.couponUsed.code == null ? `none` : trip.couponUsed.code)}"
             android:textColor="@color/textColor"
             app:layout_constraintStart_toStartOf="@+id/cardView4"
             app:layout_constraintTop_toBottomOf="@+id/payment_label" />
