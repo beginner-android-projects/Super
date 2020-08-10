@@ -25,9 +25,11 @@ import kotlin.collections.HashMap
 
 class MainRepository{
 
+    var currentToken: AutocompleteSessionToken? = null
+
 
     fun getAutocompleteSuggestions(query: String, placesClient: PlacesClient, callback: (ApiResponse<List<AutocompletePrediction>>) -> Unit){
-        val token = AutocompleteSessionToken.newInstance()
+        if(currentToken == null) currentToken = AutocompleteSessionToken.newInstance()
 
         // Create a RectangularBounds object.
         val bounds = currentUserLocation?.let{ currentUserLocation ->
@@ -44,7 +46,7 @@ class MainRepository{
                 .setLocationBias(bounds)
                 .setOrigin(LatLng(currentUserLocation?.lat!!, currentUserLocation?.lng!!))
                 .setTypeFilter(TypeFilter.ADDRESS)
-                .setSessionToken(token)
+                .setSessionToken(currentToken)
                 .setQuery(query)
                 .build()
         placesClient.findAutocompletePredictions(request)
@@ -431,6 +433,7 @@ class MainRepository{
                 } else {
                     // Handle failures
                     Log.d("FireStore", "Fail to complete loading avatar!")
+                    callback.invoke("")
                 }
             }
     }
@@ -449,6 +452,9 @@ class MainRepository{
             "work" to newUser.work,
             "avatar" to newUser.avatar
         )
+
+        Log.d("FireStore", "Updating user...")
+
         FirebaseUtil.getDb().collection("users").document(newUser.id!!)
             .set(userMap)
             .addOnSuccessListener {
@@ -457,8 +463,15 @@ class MainRepository{
                 callback.invoke(ApiResponse(null, "Update user successfully!", true))
             }
             .addOnFailureListener { e ->
-                Log.d("FireStore", "Fail to add/update user", e)
+                Log.d("FireStore", "Fail to add/update user ${e.message}")
                 callback.invoke(ApiResponse(null, "Fail: ${e.message}", false))
             }
+            .addOnCanceledListener {
+                Log.d("FireStore", "Cancel!")
+            }
+    }
+
+    fun resetToken(){
+        currentToken = null
     }
 }

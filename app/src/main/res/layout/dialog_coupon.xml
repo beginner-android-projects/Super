@@ -3,9 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-
-    tools:context=".ui.main.CouponFragment">
+    android:layout_height="match_parent">
 
     <ImageView
         android:id="@+id/close_button"
@@ -29,6 +27,20 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/empty_coupon"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:fontFamily="@font/montserrat"
+        android:gravity="center"
+        android:text="No Coupons at the moment"
+        android:textColor="@color/textColorLight"
+        android:textSize="20sp"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/textView14" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/coupon_recyclerview"

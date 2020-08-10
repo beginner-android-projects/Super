@@ -1,15 +1,15 @@
-package com.nguyen.asuper.ui
+package com.nguyen.asuper.ui.main
 
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
-import android.util.Log
 import android.view.Gravity
+import android.view.View
 import android.view.inputmethod.InputMethodManager
-import androidx.appcompat.app.ActionBar
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.widget.Toolbar.LayoutParams
+import androidx.drawerlayout.widget.DrawerLayout
+import androidx.lifecycle.Observer
 import androidx.navigation.NavController
 import androidx.navigation.findNavController
 import androidx.navigation.ui.AppBarConfiguration
@@ -20,14 +20,17 @@ import com.bumptech.glide.Glide
 import com.nguyen.asuper.R
 import com.nguyen.asuper.databinding.NavHeaderBinding
 import com.nguyen.asuper.repository.AuthRepository.Companion.currentUser
-import com.nguyen.asuper.ui.auth.RegisterFragment
+import com.nguyen.asuper.ui.auth.AuthenticationActivity
 import com.nguyen.asuper.ui.auth.RegisterFragment.Companion.PICK_IMAGE_REQUEST
-import com.nguyen.asuper.ui.main.DriverNotifyDialogFragment
 import com.nguyen.asuper.ui.main.adapter.EditUserDialogFragment
 import com.nguyen.asuper.util.SavedSharedPreferences.currentLoggedUserId
 import com.nguyen.asuper.viewmodels.MainViewModel
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.fragment_map.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers.Main
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
 
@@ -36,7 +39,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var appBarConfiguration: AppBarConfiguration
     private lateinit var navController: NavController
     private lateinit var navBinding: NavHeaderBinding
-
+    private lateinit var drawerLayout: DrawerLayout
 
     private val mainViewModel by viewModel<MainViewModel>()
 
@@ -51,7 +54,7 @@ class MainActivity : AppCompatActivity() {
 
         val mainToolBar = toolbar
         navController = findNavController(R.id.main_fragment)
-        val drawerLayout = drawer_layout
+        drawerLayout = drawer_layout
         val navigationView = navigation_view
         val view = navigationView.getHeaderView(0)
         navBinding = NavHeaderBinding.bind(view)
@@ -97,6 +100,15 @@ class MainActivity : AppCompatActivity() {
             false
         }
 
+
+        mainViewModel.errorMsg.observe(this, Observer {
+            CoroutineScope(Main).launch{
+                showErrorMessage(it)
+                delay(3_000L)
+                hideErrorMessage()
+            }
+        })
+
 //        supportActionBar?.displayOptions = ActionBar.DISPLAY_SHOW_CUSTOM
 //        supportActionBar?.setCustomView(R.layout.abs_layout)
 //        supportActionBar?.setDisplayHomeAsUpEnabled(true)
@@ -115,10 +127,22 @@ class MainActivity : AppCompatActivity() {
 
     fun hideActionBar(){
         supportActionBar?.hide()
+        drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED)
     }
 
     fun showActionBar(){
         supportActionBar?.show()
+        drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED)
+    }
+
+    fun showErrorMessage(message: String){
+        map_error_bar.visibility = View.VISIBLE
+        map_error_bar.text = message
+        map_error_bar
+    }
+
+    fun hideErrorMessage(){
+        map_error_bar.visibility = View.GONE
     }
 
     override fun onResume() {

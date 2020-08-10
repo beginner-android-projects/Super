@@ -12,7 +12,7 @@ import androidx.lifecycle.Observer
 import androidx.navigation.fragment.findNavController
 import com.bumptech.glide.Glide
 import com.nguyen.asuper.databinding.FragmentRegisterBinding
-import com.nguyen.asuper.ui.MainActivity
+import com.nguyen.asuper.ui.main.MainActivity
 import com.nguyen.asuper.viewmodels.AuthViewModel
 import org.koin.androidx.viewmodel.ext.android.viewModel
 

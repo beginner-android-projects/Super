@@ -39,7 +39,7 @@ class EditUserDialogFragment(private val mainViewModel: MainViewModel, private v
                     println("New name $newName")
                     if(newName != "") {
                         dismiss()
-                        mainViewModel.saveUserName(currentUser.id, newName)
+                        mainViewModel.saveUserName(newName)
                         onPositiveButtonClick.invoke(newName)
                     } else {
                         Toast.makeText(requireContext(), "Name cannot be empty!", Toast.LENGTH_SHORT).show()

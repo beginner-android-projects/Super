@@ -9,18 +9,37 @@
         android:id="@+id/map_view"
         android:name="com.nguyen.asuper.ui.main.MapFragment"
         android:label="Super"
-        tools:layout="@layout/fragment_map"/>
+        tools:layout="@layout/fragment_map">
+        <action
+            android:id="@+id/action_map_view_to_driver_fragment"
+            app:destination="@id/driver_fragment"
+            app:enterAnim="@anim/fragment_fade_enter"
+            app:exitAnim="@anim/fragment_fade_exit"
+            app:popEnterAnim="@anim/fragment_fade_enter"
+            app:popExitAnim="@anim/fragment_fade_exit"/>
+    </fragment>
 
     <fragment
         android:id="@+id/coupon_fragment"
         android:name="com.nguyen.asuper.ui.main.CouponFragment"
         android:label="coupon"
-        tools:layout="@layout/fragment_coupon"/>
+        tools:layout="@layout/dialog_coupon"/>
 
     <fragment
         android:id="@+id/trip_history_fragment"
         android:name="com.nguyen.asuper.ui.main.TripHistoryFragment"
         android:label="Trip History"
-        tools:layout="@layout/fragment_trip_history"/>
+        tools:layout="@layout/fragment_trip_history">
+        <action
+            android:id="@+id/action_trip_history_fragment_to_driver_fragment"
+            app:destination="@id/driver_fragment"
+            />
+    </fragment>
+
+    <fragment
+        android:id="@+id/driver_fragment"
+        android:name="com.nguyen.asuper.ui.main.DriverFragment"
+        android:label="Driver Fragment"
+        tools:layout="@layout/fragment_driver"/>
 
 </navigation>

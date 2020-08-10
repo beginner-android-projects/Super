@@ -6,11 +6,11 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:id="@+id/drawer_layout"
-    tools:context=".ui.MainActivity"
+    tools:context=".ui.main.MainActivity"
     android:fitsSystemWindows="true">
 
 
-    <LinearLayout
+    <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical">
@@ -24,17 +24,32 @@
             app:popupTheme="@style/ThemeOverlay.AppCompat.Light"
             android:elevation="4dp" />
 
+
+
         <fragment
             android:id="@+id/main_fragment"
             android:name="androidx.navigation.fragment.NavHostFragment"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             app:defaultNavHost="true"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/appBarLayout"
+            android:layout_below="@id/toolbar"
             app:navGraph="@navigation/main_graph" />
 
-    </LinearLayout>
+
+        <TextView
+            android:id="@+id/map_error_bar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="60dp"
+            android:background="@color/red"
+            android:fontFamily="@font/montserrat_bold"
+            android:gravity="center"
+            android:visibility="gone"
+            android:layout_below="@id/toolbar"
+            android:textColor="@color/textColorLight"
+            android:textSize="16sp"
+            android:padding="10dp" />
+    </RelativeLayout>
 
 
 

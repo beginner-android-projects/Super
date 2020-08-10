@@ -24,18 +24,24 @@ class TripHistoryFragment : Fragment() {
     ): View? {
         val view = inflater.inflate(R.layout.fragment_trip_history, container, false)
 
+        view.loading_icon_trip_history.visibility = View.VISIBLE
+
         mainViewModel.getTripHistory()
 
         val recyclerView = view.trip_history_recyclerview
         recyclerView.layoutManager = LinearLayoutManager(context)
 
+
         mainViewModel.tripsList.observe(viewLifecycleOwner, Observer {
-            recyclerView.adapter = TripHistoryAdapter(it)
+            view.loading_icon_trip_history.visibility = View.GONE
+            if(it.isEmpty()){
+               view.empty_trip.visibility = View.VISIBLE
+            } else {
+                view.empty_trip.visibility = View.GONE
+                recyclerView.adapter = TripHistoryAdapter(it)
+            }
+
         })
-
-
-
-
         return view
     }
 

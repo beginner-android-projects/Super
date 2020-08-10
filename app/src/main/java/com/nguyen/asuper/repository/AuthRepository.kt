@@ -8,6 +8,7 @@ import com.nguyen.asuper.data.OriginDestination
 import com.nguyen.asuper.data.User
 import com.nguyen.asuper.util.FirebaseUtil
 import com.nguyen.asuper.util.SavedSharedPreferences
+import com.nguyen.asuper.util.SavedSharedPreferences.currentLoggedUserId
 import com.nguyen.asuper.util.SavedSharedPreferences.mGson
 
 class AuthRepository{
@@ -37,16 +38,26 @@ class AuthRepository{
 
                         if(avatar != null){
                             uploadAvatar(user.uid, avatar, fun(uriString: String){
+                                if(uriString == "") {
+                                    callback.invoke(ApiResponse(null, "Cannot upload this image!", false))
+                                    return
+                                }
                                 val user = User(user.uid, username, email, avatar = uriString)
                                 insertOrUpdateUserInFireStore(user, fun(result: Boolean){
-                                    if (result) callback.invoke(ApiResponse(200, "Update Successfully!", true))
+                                    if (result){
+                                        currentLoggedUserId = currentUser.id
+                                        callback.invoke(ApiResponse(200, "Register Successfully!", true))
+                                    }
                                     else callback.invoke(ApiResponse(null, "Cannot update at the moment!", false))
                                 })
                             })
                         } else {
                             val user = User(user.uid, username, email)
                             insertOrUpdateUserInFireStore(user, fun(result: Boolean){
-                                if (result) callback.invoke(ApiResponse(200, "Register Successfully!", true))
+                                if (result) {
+                                    currentLoggedUserId = currentUser.id
+                                    callback.invoke(ApiResponse(200, "Register Successfully!", true))
+                                }
                                 else callback.invoke(ApiResponse(null, "Cannot register at the moment!", false))
                             })
                         }
@@ -73,11 +84,12 @@ class AuthRepository{
             .addOnCompleteListener {task ->
                 if(task.isSuccessful) {
                     val user = FirebaseUtil.getCurrentUser()
-                    Log.d("Login", "Success: ${user.toString()}")
+                    Log.d("Login", "Success: ${user?.uid}")
 
                     user?.uid?.let {
                         getUser(it, fun(user: User){
                             currentUser = user
+                            currentLoggedUserId = currentUser.id
                             callback.invoke(ApiResponse(200, "Login Successfully!", true))
                         })
                     }
@@ -176,6 +188,7 @@ class AuthRepository{
     }
 
     fun getUser(id: String, callback: (user: User) -> Unit) {
+        Log.d("FireStore", "Getting user...!")
         FirebaseUtil.getDb().collection("users").document(id)
             .get()
             .addOnSuccessListener { document ->
@@ -195,7 +208,7 @@ class AuthRepository{
                 }
             }
             .addOnFailureListener { exception ->
-                Log.d("FireStore", "get failed with ", exception)
+                Log.d("FireStore", "get failed with ${exception.message}")
             }
     }
 
@@ -231,6 +244,7 @@ class AuthRepository{
                 } else {
                     // Handle failures
                     Log.d("Register", "Fail to complete loading avatar!")
+                    callback.invoke("")
                 }
             }
     }

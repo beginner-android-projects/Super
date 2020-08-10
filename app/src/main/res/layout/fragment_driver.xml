@@ -1,40 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
-<layout xmlns:tools="http://schemas.android.com/tools"
-    xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto">
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <data>
-
-        <import type="android.view.View"/>
-
-        <variable
-            name="driver"
-            type="com.nguyen.asuper.data.Driver" />
-
-        <variable
-            name="cancelable"
-            type="Boolean" />
-
-        <variable
-            name="rating"
-            type="Double" />
 
 
     </data>
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:paddingBottom="10dp"
-        android:background="@drawable/transparent_button">
-
+        android:layout_height="match_parent"
+        tools:context=".ui.main.DriverFragment">
         <androidx.cardview.widget.CardView
             android:id="@+id/driver_container"
             android:layout_width="match_parent"
             android:layout_height="100dp"
             app:cardCornerRadius="15dp"
             android:visibility="visible"
-            android:transitionName="driverTransition"
+            android:transitionName="driverTransitionTo"
             android:layout_marginTop="10dp"
             android:layout_marginHorizontal="20dp"
             app:layout_constraintTop_toTopOf="parent" />
@@ -51,7 +35,6 @@
             app:layout_constraintTop_toTopOf="@+id/driver_container">
 
             <ImageView
-                imageFromUrl="@{driver.avatar}"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:scaleType="centerCrop"
@@ -67,7 +50,6 @@
             android:elevation="2dp"
             android:textAlignment="center"
             android:fontFamily="@font/montserrat"
-            android:text="@{driver.name}"
             android:textColor="@color/textColor"
             android:textSize="16sp"
 
@@ -84,40 +66,9 @@
             android:scaleX="0.6"
             android:scaleY="0.6"
             android:isIndicator="true"
-            android:rating="@{rating.floatValue()}"
+
             app:layout_constraintStart_toEndOf="@+id/user_avatar_post"
             app:layout_constraintTop_toBottomOf="@+id/textView11" />
-
-
-        <androidx.cardview.widget.CardView
-            android:id="@+id/cancel_button"
-            android:layout_width="match_parent"
-            android:layout_height="50dp"
-            android:layout_marginHorizontal="20dp"
-            android:layout_marginTop="10dp"
-            android:layout_marginBottom="10dp"
-            app:cardBackgroundColor="@color/red"
-            app:cardCornerRadius="40dp"
-            android:visibility="@{cancelable ? View.VISIBLE : View.GONE, default= visible}"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/driver_container" >
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:fontFamily="@font/montserrat_bold"
-                android:elevation="2dp"
-                android:textSize="18dp"
-                android:text="Cancel"
-                android:layout_gravity="center"
-                android:textColor="@color/textColorLight" />
-
-
-        </androidx.cardview.widget.CardView>
-
-
 
 
     </androidx.constraintlayout.widget.ConstraintLayout>

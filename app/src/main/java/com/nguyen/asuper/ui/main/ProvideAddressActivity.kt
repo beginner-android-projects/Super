@@ -1,4 +1,4 @@
-package com.nguyen.asuper.ui
+package com.nguyen.asuper.ui.main
 
 import android.app.Activity
 import android.content.Intent
@@ -53,13 +53,17 @@ class ProvideAddressActivity : AppCompatActivity() {
         home_address_button.setOnClickListener {
             val intent = Autocomplete.IntentBuilder(AutocompleteActivityMode.FULLSCREEN, fields)
                 .build(this)
-            startActivityForResult(intent, AUTOCOMPLETE_HOME_REQUEST_CODE)
+            startActivityForResult(intent,
+                AUTOCOMPLETE_HOME_REQUEST_CODE
+            )
         }
 
         work_address_button.setOnClickListener {
             val intent = Autocomplete.IntentBuilder(AutocompleteActivityMode.FULLSCREEN, fields)
                 .build(this)
-            startActivityForResult(intent, AUTOCOMPLETE_WORK_REQUEST_CODE)
+            startActivityForResult(intent,
+                AUTOCOMPLETE_WORK_REQUEST_CODE
+            )
         }
 
         save_address_button.setOnClickListener {

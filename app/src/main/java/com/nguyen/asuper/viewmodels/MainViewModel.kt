@@ -93,7 +93,9 @@ class MainViewModel(private val repository: MainRepository) : ViewModel(){
 
     fun getAutoCompleteSuggestion(query: String, placesClient: PlacesClient){
         repository.getAutocompleteSuggestions(query, placesClient, fun(response: ApiResponse<List<AutocompletePrediction>>){
-            autoSuggestionsResponse.value = response
+            if(response.status) autoSuggestionsResponse.value = response
+            else errorMsg.value = response.message
+
         })
     }
 
@@ -105,6 +107,8 @@ class MainViewModel(private val repository: MainRepository) : ViewModel(){
                     val temp = OriginDestination(origin, originDestination.value?.destination)
                     originDestination.value = temp
                 }
+            } else {
+                errorMsg.value = response.message
             }
         })
     }
@@ -124,10 +128,9 @@ class MainViewModel(private val repository: MainRepository) : ViewModel(){
     fun getDirection(origin: LatLng, destination: LatLng){
         repository.getDirection(origin, destination, fun(response: ApiResponse<Direction>){
             Log.d("Map", "Direction response: $response")
-            response.status?.let {
-                if(it) directionResponse.value = response
-                changeCarOption("taxi")
-            }
+            if(response.status) directionResponse.value = response
+            else errorMsg.value = response.message
+            changeCarOption("taxi")
         })
     }
 
@@ -194,6 +197,7 @@ class MainViewModel(private val repository: MainRepository) : ViewModel(){
                 repository.getDirection(it, LatLng(origin.lat!!, origin.lng!!), fun(response: ApiResponse<Direction>){
                     Log.d("Map", "Direction response: $response")
                     if(response.status) driverDirectionResponse.value = response
+                    else errorMsg.value = response.message
                 })
             }
 
@@ -209,8 +213,10 @@ class MainViewModel(private val repository: MainRepository) : ViewModel(){
         val minutes= if (seconds > 3600)  TimeUnit.SECONDS.toMinutes(seconds - 3600 * hours) else TimeUnit.SECONDS.toMinutes(seconds)
         val hourString: String = if(hours > 0) "$hours hours " else ""
         val minuteString: String = if(minutes > 0) "$minutes minutes " else ""
-
-        return "$hourString$minuteString"
+        val result = "$hourString$minuteString"
+        Log.d("Map", "Convert result $hourString$minuteString")
+        if(result != "") return "$hourString$minuteString"
+        else return "Few seconds"
     }
 
     fun setPaymentMethod(method: String){
@@ -218,8 +224,9 @@ class MainViewModel(private val repository: MainRepository) : ViewModel(){
     }
 
     fun getCoupons(){
-        repository.getCoupons {
-            couponListResponse.value = it
+        repository.getCoupons {response ->
+            if(response.status) couponListResponse.value = response
+            else errorMsg.value = response.message
         }
     }
 
@@ -241,7 +248,6 @@ class MainViewModel(private val repository: MainRepository) : ViewModel(){
                 }
             }
         }
-
     }
 
     fun submitRating(rating: Double){
@@ -249,8 +255,8 @@ class MainViewModel(private val repository: MainRepository) : ViewModel(){
         trip.value?.driver?.let { driver ->
             Log.d("FireStore", "HERE2")
             repository.submitRating(rating, driver){
-                submitRatingResponse.value = it
-                if(it.status!!) errorMsg.value = it.message
+                if(!it.status) errorMsg.value = it.message
+                else submitRatingResponse.value = it
             }
         }
 
@@ -268,6 +274,10 @@ class MainViewModel(private val repository: MainRepository) : ViewModel(){
             return
         }
         repository.uploadAvatar(userId, uri){
+            if(it == "") {
+                errorMsg.value = "Can't upload this image!"
+                return@uploadAvatar
+            }
             repository.updateUser(avatar = it) {response ->
                 if(!response.status){
                     errorMsg.value = response.message
@@ -276,12 +286,21 @@ class MainViewModel(private val repository: MainRepository) : ViewModel(){
         }
     }
 
-    fun saveUserName(id: String?, newName: String) {
+    fun saveUserName(newName: String) {
         repository.updateUser(username = newName) {response ->
             if(!response.status){
                 errorMsg.value = response.message
             }
         }
+    }
+
+    fun cancelCoupon() {
+        currentCoupon.value = null
+        fareCouponApplied.value = fareEstimated.value
+    }
+
+    fun resetToken() {
+        repository.resetToken()
     }
 
 

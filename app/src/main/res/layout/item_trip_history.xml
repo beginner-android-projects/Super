@@ -53,16 +53,18 @@
             android:id="@+id/preview_item"
             android:layout_width="match_parent"
             android:layout_height="200dp"
+            app:layout_constraintVertical_bias="0"
             app:layout_constraintTop_toBottomOf="@id/date" />
 
         <ImageView
             android:id="@+id/imageView6"
             android:layout_width="20dp"
             android:layout_height="20dp"
-            android:layout_margin="20dp"
+            android:layout_marginStart="20dp"
             android:src="@drawable/circle_green"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/preview_item" />
+            app:layout_constraintTop_toTopOf="@id/textView23"
+            app:layout_constraintBottom_toBottomOf="@id/textView23"/>
 
         <View
             android:id="@+id/view8"
@@ -92,10 +94,10 @@
             android:text="@{trip.originDestination.origin.address == null ? trip.originDestination.origin.name : trip.originDestination.origin.address}"
             android:textColor="@color/textColor"
             android:textSize="16sp"
-            app:layout_constraintBottom_toBottomOf="@+id/imageView6"
+            android:layout_marginTop="15dp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toEndOf="@+id/imageView6"
-            app:layout_constraintTop_toTopOf="@+id/imageView6" />
+            app:layout_constraintTop_toBottomOf="@+id/preview_item" />
 
         <TextView
             android:id="@+id/textView20"
@@ -125,7 +127,7 @@
             app:layout_constraintTop_toBottomOf="@+id/textView20" />
 
         <androidx.cardview.widget.CardView
-            android:id="@+id/cardView4"
+            android:id="@+id/driver_container"
             android:layout_width="match_parent"
             android:layout_height="100dp"
             android:layout_marginHorizontal="20dp"
@@ -141,9 +143,9 @@
             android:layout_height="70dp"
             app:cardCornerRadius="40dp"
             android:layout_marginStart="10dp"
-            app:layout_constraintBottom_toBottomOf="@+id/cardView4"
-            app:layout_constraintStart_toStartOf="@+id/cardView4"
-            app:layout_constraintTop_toTopOf="@+id/cardView4">
+            app:layout_constraintBottom_toBottomOf="@+id/driver_container"
+            app:layout_constraintStart_toStartOf="@+id/driver_container"
+            app:layout_constraintTop_toTopOf="@+id/driver_container">
 
             <ImageView
                 imageFromUrl="@{trip.driver.avatar}"
@@ -194,7 +196,7 @@
             android:textColor="@color/textColor"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/cardView4" />
+            app:layout_constraintTop_toBottomOf="@+id/driver_container" />
 
         <TextView
             android:id="@+id/textView24"
@@ -204,7 +206,7 @@
             android:fontFamily="@font/montserrat"
             android:text="@{`Used Coupon: ` + (trip.couponUsed.code == null ? `none` : trip.couponUsed.code)}"
             android:textColor="@color/textColor"
-            app:layout_constraintStart_toStartOf="@+id/cardView4"
+            app:layout_constraintStart_toStartOf="@+id/driver_container"
             app:layout_constraintTop_toBottomOf="@+id/payment_label" />
 
         <TextView
@@ -213,7 +215,7 @@
             android:layout_height="wrap_content"
             android:fontFamily="@font/montserrat"
             android:layout_marginTop="5dp"
-            android:text="@{`Final fare: ` + trip.fare.toString()}"
+            android:text="@{`Final fare: $` + trip.fare.toString()}"
             android:textColor="@color/textColor"
             app:layout_constraintStart_toStartOf="@+id/textView24"
             app:layout_constraintTop_toBottomOf="@+id/textView24" />

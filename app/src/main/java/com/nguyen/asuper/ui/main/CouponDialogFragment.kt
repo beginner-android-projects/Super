@@ -7,6 +7,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ProgressBar
+import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.Observer
@@ -16,12 +17,13 @@ import com.nguyen.asuper.R
 import com.nguyen.asuper.data.Coupon
 import com.nguyen.asuper.ui.main.adapter.CouponAdapter
 import com.nguyen.asuper.viewmodels.MainViewModel
-import kotlinx.android.synthetic.main.fragment_coupon.view.*
+import kotlinx.android.synthetic.main.dialog_coupon.view.*
 
 class CouponDialogFragment(private val mainViewModel: MainViewModel): DialogFragment() {
 
     private lateinit var recyclerView: RecyclerView
     private lateinit var loadingIcon: ProgressBar
+    private lateinit var emptyText: TextView
     private lateinit var pickCouponListener: View.OnClickListener
 
     override fun onCreateView(
@@ -29,16 +31,22 @@ class CouponDialogFragment(private val mainViewModel: MainViewModel): DialogFrag
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        val view = inflater.inflate(R.layout.fragment_coupon, container, false)
+        val view = inflater.inflate(R.layout.dialog_coupon, container, false)
 
 
         mainViewModel.couponList.observe(viewLifecycleOwner, Observer {
             Log.d("Coupon", "Coupons: ${it.size}")
             loadingIcon.visibility = View.GONE
-            recyclerView.adapter = CouponAdapter(it, mainViewModel, fun(){
-                (it as ArrayList<Coupon>).clear()
-                dismiss()
-            })
+            if(it.isEmpty()){
+                emptyText.visibility = View.VISIBLE
+            } else {
+                emptyText.visibility = View.GONE
+                recyclerView.adapter = CouponAdapter(it, mainViewModel, fun(){
+                    (it as ArrayList<Coupon>).clear()
+                    dismiss()
+                })
+            }
+
         })
 
 
@@ -53,11 +61,12 @@ class CouponDialogFragment(private val mainViewModel: MainViewModel): DialogFrag
 
             // Inflate and set the layout for the dialog
             // Pass null as the parent view because its going in the dialog layout
-            val view = inflater.inflate(R.layout.fragment_coupon, null)
+            val view = inflater.inflate(R.layout.dialog_coupon, null)
 
             recyclerView = view.coupon_recyclerview
             recyclerView.layoutManager = LinearLayoutManager(requireContext())
             loadingIcon = view.loading_icon
+            emptyText = view.empty_coupon
 
             view.close_button.setOnClickListener {
                 dismiss()
